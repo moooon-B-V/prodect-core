@@ -1167,7 +1167,18 @@
             .col-provider svg { width: 14px; height: 14px; color: var(--el-icon-muted); }
             .col-index { min-width: 0; }
             .col-uses { min-width: 0; }
-            .col-act { min-width: 0; display: flex; justify-content: flex-end; }
+            .col-act {
+              min-width: 0; display: flex; flex-direction: column;
+              align-items: flex-end; justify-content: center; gap: 3px;
+            }
+            /* ⚠️ The VENUE, under the button — never inside its label. `Remove on
+               GitHub` read as "delete the repository FROM GitHub", which is not
+               what the control does and is the worse of the two readings to
+               guess wrong. The label names the ACT and is the same word on both
+               providers; this line names WHERE the act happens, which is the
+               only thing that actually differs. --el-text-secondary because the
+               row hover-tints to --el-surface, where --el-text-muted is 4.17:1. */
+            .act-note { font-size: 11px; line-height: 1.2; color: var(--el-text-secondary); }
             /* the `Used by N projects` control — a disclosure, not a link out */
             .uses {
               display: inline-flex; align-items: center; gap: 5px;
@@ -2459,8 +2470,9 @@
                       </span>
                       <span class="col-act">
                         <button class="btn btn-sm btn-danger-ghost">
-                          <svg><use href="#i-external" /></svg>Remove on GitHub
+                          <svg><use href="#i-external" /></svg>Disconnect
                         </button>
+                        <span class="act-note">happens on GitHub</span>
                       </span>
                     </div>
 
@@ -2488,8 +2500,9 @@
                       </span>
                       <span class="col-act">
                         <button class="btn btn-sm btn-danger-ghost">
-                          <svg><use href="#i-external" /></svg>Remove on GitHub
+                          <svg><use href="#i-external" /></svg>Disconnect
                         </button>
+                        <span class="act-note">happens on GitHub</span>
                       </span>
                     </div>
                     <div class="uses-detail">
@@ -2528,6 +2541,7 @@
                       </span>
                       <span class="col-act">
                         <button class="btn btn-sm btn-danger-ghost">Disconnect</button>
+                        <span class="act-note">happens here</span>
                       </span>
                     </div>
 
@@ -2553,8 +2567,9 @@
                       </span>
                       <span class="col-act">
                         <button class="btn btn-sm btn-danger-ghost">
-                          <svg><use href="#i-external" /></svg>Remove on GitHub
+                          <svg><use href="#i-external" /></svg>Disconnect
                         </button>
+                        <span class="act-note">happens on GitHub</span>
                       </span>
                     </div>
                   </div>
@@ -2614,13 +2629,13 @@
       <!-- ═══════════ PANEL 7 — THE ORG-LEVEL REMOVAL, GITHUB ARM ═══════════ -->
       <div>
         <div class="panel-label">
-          Panel 7 · <b>Remove from the organisation — GitHub</b>: the disclosure happens BEFORE the
-          link-out, because there is no dialog left to show once the admin is on github.com
+          Panel 7 · <b>Disconnect from the organisation — GitHub</b>: the disclosure happens BEFORE
+          the link-out, because there is no dialog left to show once the admin is on github.com
         </div>
         <div class="panel" style="width: 600px">
           <div class="disclose">
             <div class="disclose-head">
-              <h3>Remove moooon/motir-ai on GitHub</h3>
+              <h3>Disconnect moooon/motir-ai from the organisation</h3>
               <p>
                 Which repositories Motir can read is the GitHub App&rsquo;s own screen, so the
                 removal happens there. Here is what it will do.

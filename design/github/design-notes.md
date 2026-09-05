@@ -552,7 +552,44 @@ assets touched in one pass disagreed about whether the grouping existed.
   | Provider    | the provider mark + label — the inventory spans both, so the pressed Segmented does not answer this                                             |
   | Index       | a `Pill` in **all four** states: **Current** (mint, check) · **Stale** (peach, clock) · **Indexing…** (sky, dots) · **Never indexed** (neutral) |
   | Used by     | **`Used by N projects`**, drawn AT REST                                                                                                         |
-  | _(actions)_ | the org-level removal — `Remove on GitHub` for GitHub, `Disconnect` for GitLab                                                                  |
+  | _(actions)_ | **`Disconnect`** on both providers, with the VENUE on a second line — `happens on GitHub` / `happens here`                                      |
+
+- **⚠️ THE LABEL NAMES THE ACT; A SECOND LINE NAMES THE VENUE. `Remove on GitHub` was WRONG, and
+  wrong in the dangerous direction (Yue, 2026-09-05).** It reads as _"delete the repository FROM
+  GitHub"_ — the destructive act Motir cannot perform and must never appear to offer. Two jobs were
+  packed into one label, and the venue half won the reading.
+
+  The fix is to split them: the button is **`Disconnect`** — the same word, on both providers,
+  because **the act is the same and only the venue differs** — and the venue rides underneath in
+  `--el-text-secondary` at 11px:
+
+  | provider   | button         | second line         |
+  | ---------- | -------------- | ------------------- |
+  | **GitHub** | `Disconnect` ↗ | `happens on GitHub` |
+  | **GitLab** | `Disconnect`   | `happens here`      |
+
+  Three things follow, and each is a reason the split is better than a re-word:
+  - **`happens on GitHub` cannot be misread as an object.** "Happens" names where the ACT occurs;
+    `on GitHub` alone, stacked under `Disconnect`, would re-form the same sentence and the same
+    misreading.
+  - **GitLab gets a line too, and it is not filler.** `happens here` is the information a person
+    actually wants before clicking: this one is immediate and in-app, that one takes you out. Drawn
+    as a pair, the two rows teach the difference; drawn with only one annotated, the blank reads as
+    an oversight.
+  - **The external-link glyph stays on the GitHub button** — the conventional out-of-app signal,
+    now reinforced rather than carrying the whole weight.
+
+  **The caption belongs to the MIXED table only.** It exists to disambiguate, so it earns its place
+  where the rows actually differ — Panel 6's inventory, which spans both providers. On the
+  GitLab-arm's single-provider `Projects` card (`design/gitlab/` Panel 7) every row is in-app, so a
+  `happens here` on each would be uniform noise; the card's own subtitle is the right place for it
+  there if it is wanted at all. **Same word on the button in both assets either way** — that is the
+  half that must not drift.
+
+  The same rename lands on **Panel 7's disclosure head**: `Remove moooon/motir-ai on GitHub` →
+  **`Disconnect moooon/motir-ai from the organisation`**, which is also what GitLab's confirm
+  already said (`Disconnect moooon/motir-gateway from the organisation?`). The two arms now name
+  one act and differ only in the affordance the venue forces.
 
 - **⚠️ `Used by N projects` is a COLUMN, not a sentence, and it is the whole disclosure
   mechanism.** A warning inside a dialog is read past; a count that was on screen all along is not,

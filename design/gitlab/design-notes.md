@@ -505,6 +505,18 @@ assets touched in one pass disagreed about whether the grouping existed.
 The **project-level** removal is neither — a quiet row action whose copy reassures — and it belongs
 to `design/repository-set/` (**MOTIR-4674**).
 
+**⚠️ The ROW BUTTON is the same word on both arms: `Disconnect` (Yue, 2026-09-05).** The GitHub arm
+briefly said `Remove on GitHub`, which reads as _"delete the repository FROM GitHub"_ — the one act
+Motir cannot perform and must never appear to offer. The act is identical on both providers; only
+the venue differs, so the **label names the act and a second line names the venue**
+(`happens on GitHub` / `happens here`, `--el-text-secondary` 11px). See `design/github/`
+design-notes § _the label names the act_.
+
+That second line belongs to **Panel 6's mixed inventory**, which spans both providers and is where
+the rows genuinely differ. This asset's single-provider `Projects` card is uniformly in-app, so it
+carries no per-row caption — the card's own subtitle is the place for it if it is wanted. **The
+button's word must not drift between the two assets; the caption legitimately may.**
+
 ### Per-element `--el-*` roles added by this amendment
 
 | Element                                | Token(s)                                                                                                                |
