@@ -218,6 +218,94 @@ describe('platformBillingClassificationService — reads', () => {
   });
 });
 
+describe('platformBillingClassificationService — the org PAGE read', () => {
+  // ⚠️ ONE AUDITED READ FOR BOTH HALVES, and the reason it is one method rather
+  // than two: the page shows an organization AND every operator write on it, and
+  // a second call would write a second `estate.read` row for the same page view.
+  // Nothing else in this suite reaches `getOrganizationPage` — the org page is
+  // its only caller — so without this describe the method ships measured only by
+  // a browser.
+
+  it('returns the organization and only the WRITES on it — a page view is not one', async () => {
+    const org = await seedOrg();
+
+    // A read FIRST, which writes an `estate.read` row of its own…
+    await platformBillingClassificationService.getOrganization(currentPrincipal!, org.id);
+    // …then a real write.
+    await platformBillingClassificationService.setInternalBilling(
+      currentPrincipal!,
+      org.id,
+      true,
+      'Dogfood org (MOTIR-4337)',
+    );
+
+    const page = await platformBillingClassificationService.getOrganizationPage(
+      currentPrincipal!,
+      org.id,
+    );
+
+    expect(page.organization.id).toBe(org.id);
+    expect(page.organization.internalBilling).toBe(true);
+    // The TRAIL is writes only. Three audit rows exist by now (two reads and one
+    // write); the operator's log shows the one that changed something.
+    expect((await auditRows()).length).toBe(3);
+    expect(page.actions.map((a) => a.action)).toEqual(['org.internal_billing_set']);
+    expect(page.actions[0]?.reason).toBe('Dogfood org (MOTIR-4337)');
+  });
+
+  it('the WRITE filter is the reason POLICY, not a hard-coded list', async () => {
+    // `isOperatorWrite` asks the audit vocabulary whether the action requires a
+    // reason — ADR §3b makes that equivalent to "this action changed something".
+    // A list would need editing every time a later story adds a verb, and the
+    // log would silently omit the new one until somebody noticed.
+    const org = await seedOrg();
+    await platformBillingClassificationService.setInternalBilling(
+      currentPrincipal!,
+      org.id,
+      true,
+      'On',
+    );
+    await platformBillingClassificationService.setInternalBilling(
+      currentPrincipal!,
+      org.id,
+      false,
+      'Off',
+    );
+
+    const page = await platformBillingClassificationService.getOrganizationPage(
+      currentPrincipal!,
+      org.id,
+    );
+    // Newest first, and BOTH directions are writes.
+    expect(page.actions.map((a) => a.action)).toEqual([
+      'org.internal_billing_unset',
+      'org.internal_billing_set',
+    ]);
+  });
+
+  it('a missing organization throws INSIDE the transaction, so the page read leaves no row', async () => {
+    await expect(
+      platformBillingClassificationService.getOrganizationPage(
+        currentPrincipal!,
+        'cmnot-a-real-id',
+      ),
+    ).rejects.toBeInstanceOf(PlatformOrganizationNotFoundError);
+    expect(await auditRows()).toEqual([]);
+  });
+
+  it('a `support` principal may read the page — it is a READ (ADR §7)', async () => {
+    const org = await seedOrg();
+    currentPrincipal = await seedOperator('support');
+
+    const page = await platformBillingClassificationService.getOrganizationPage(
+      currentPrincipal,
+      org.id,
+    );
+    expect(page.organization.id).toBe(org.id);
+    expect(page.actions).toEqual([]);
+  });
+});
+
 describe('platformBillingClassificationService — the classification write', () => {
   it('classifies an org and writes exactly ONE audit row carrying the actor, the target and the reason', async () => {
     const org = await seedOrg({ name: 'moooon B.V.', slug: 'moooon-set' });
@@ -301,6 +389,32 @@ describe('platformBillingClassificationService — the classification write', ()
     ).rejects.toBeInstanceOf(PlatformClassificationStateError);
 
     expect(await auditRows()).toHaveLength(0);
+  });
+
+  it('refuses UNSETTING an org that was never classified — the refusal names WHICH way', async () => {
+    // The mirror of the case above, and not a duplicate: the error carries the
+    // state it found, so the two directions produce two different sentences. An
+    // operator told "already classified" when they tried to REMOVE a
+    // classification would go looking for a bug that is not there.
+    const org = await seedOrg();
+
+    await expect(
+      platformBillingClassificationService.setInternalBilling(
+        currentPrincipal!,
+        org.id,
+        false,
+        'Never was internal',
+      ),
+    ).rejects.toThrow(/is not currently classified/);
+    await expect(
+      platformBillingClassificationService.setInternalBilling(
+        currentPrincipal!,
+        org.id,
+        false,
+        'Never was internal',
+      ),
+    ).rejects.toBeInstanceOf(PlatformClassificationStateError);
+    expect(await auditRows()).toEqual([]);
   });
 
   it('refuses a missing organization, and writes nothing', async () => {

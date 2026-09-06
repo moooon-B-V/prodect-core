@@ -113,6 +113,70 @@ describe('ClassificationBar', () => {
     );
   });
 
+  it('CANCEL closes the dialog and clears the typed reason — nothing is submitted', async () => {
+    // The other way out of the dialog, and the one that must not leave a draft
+    // behind: reopening after a cancel presents an empty box and a disabled
+    // primary, not the reason somebody thought better of.
+    renderBar(false);
+    fireEvent.click(screen.getByRole('button', { name: /Classify as internal billing/i }));
+    fireEvent.change(await screen.findByLabelText(/Reason/i), {
+      target: { value: 'Second thoughts' },
+    });
+    fireEvent.click(screen.getByRole('button', { name: /^Cancel$/i }));
+
+    await waitFor(() =>
+      expect(screen.queryByRole('button', { name: /^Classify as internal$/i })).toBeNull(),
+    );
+    expect(setInternalBillingAction).not.toHaveBeenCalled();
+
+    fireEvent.click(screen.getByRole('button', { name: /Classify as internal billing/i }));
+    const field = await screen.findByLabelText(/Reason/i);
+    expect((field as HTMLInputElement).value).toBe('');
+    expect(
+      screen.getByRole('button', { name: /^Classify as internal$/i }).hasAttribute('disabled'),
+    ).toBe(true);
+  });
+
+  it('ESCAPE is a cancel — the dialog`s own dismissal runs the same teardown', async () => {
+    // The dialog can also be dismissed by the Modal rather than by the footer,
+    // and that path goes through `onOpenChange` instead of the Cancel button. It
+    // must clear the draft too: a reason left behind by one route and not the
+    // other is the kind of difference nobody notices until an operator submits
+    // yesterday's sentence.
+    renderBar(false);
+    fireEvent.click(screen.getByRole('button', { name: /Classify as internal billing/i }));
+    fireEvent.change(await screen.findByLabelText(/Reason/i), {
+      target: { value: 'Typed, then Esc' },
+    });
+
+    fireEvent.keyDown(document.activeElement ?? document.body, { key: 'Escape', code: 'Escape' });
+
+    await waitFor(() =>
+      expect(screen.queryByRole('button', { name: /^Classify as internal$/i })).toBeNull(),
+    );
+    expect(setInternalBillingAction).not.toHaveBeenCalled();
+
+    fireEvent.click(screen.getByRole('button', { name: /Classify as internal billing/i }));
+    expect(((await screen.findByLabelText(/Reason/i)) as HTMLInputElement).value).toBe('');
+  });
+
+  it('a SUCCESSFUL classify closes the dialog and says so', async () => {
+    // The `ok` arm of `report`, which every case above walks past: the dialog
+    // closes and the confirmation names the direction that happened. The chips
+    // and the trail are SERVER-rendered — the action revalidates the path — so
+    // there is nothing for this island to update, which is the whole reason it
+    // owns no organization state.
+    renderBar(false);
+    fireEvent.click(screen.getByRole('button', { name: /Classify as internal billing/i }));
+    fireEvent.change(await screen.findByLabelText(/Reason/i), { target: { value: 'Dogfood org' } });
+    fireEvent.click(screen.getByRole('button', { name: /^Classify as internal$/i }));
+
+    await waitFor(() =>
+      expect(screen.queryByRole('button', { name: /^Classify as internal$/i })).toBeNull(),
+    );
+    expect(screen.getByText(/Classified as internal billing/i)).toBeTruthy();
+  });
+
   it('names each failure rather than showing one generic error', async () => {
     setInternalBillingAction.mockResolvedValueOnce({
       ok: false,
@@ -126,5 +190,23 @@ describe('ClassificationBar', () => {
     // The code maps to its OWN line of copy — the whole reason the action returns
     // a discriminated result instead of throwing.
     expect(await screen.findByText(/cannot change a billing classification/i)).toBeTruthy();
+  });
+
+  it('a LOST RACE is named as a lost race, not as a failure to retry', async () => {
+    // The second code, driven for the same reason the first one is: each maps to
+    // its OWN line, and a dialog that collapsed them would tell an operator to
+    // retry a write a colleague already made.
+    setInternalBillingAction.mockResolvedValueOnce({
+      ok: false,
+      code: 'ALREADY_IN_STATE',
+    } as never);
+    renderBar(false);
+    fireEvent.click(screen.getByRole('button', { name: /Classify as internal billing/i }));
+    fireEvent.change(await screen.findByLabelText(/Reason/i), { target: { value: 'a reason' } });
+    fireEvent.click(screen.getByRole('button', { name: /^Classify as internal$/i }));
+
+    expect(await screen.findByText(/already in that state/i)).toBeTruthy();
+    // The dialog STAYS OPEN on a refusal — the typing is not thrown away.
+    expect(screen.getByRole('button', { name: /^Classify as internal$/i })).toBeTruthy();
   });
 });
