@@ -534,6 +534,25 @@ export const MCP_TOOL_INPUT_SCHEMAS: Record<keyof typeof TOOL_PERMISSIONS, McpTo
     additionalProperties: false,
     $schema: 'http://json-schema.org/draft-07/schema#',
   },
+  create_acceptance_upload: {
+    type: 'object',
+    properties: {
+      key: {
+        type: 'string',
+        minLength: 1,
+        description:
+          'The work item identifier — the project key, a dash, the number (e.g. "ACME-7"). Case-insensitive.',
+      },
+      hasTrace: {
+        type: 'boolean',
+        description:
+          'True to ALSO mint a grant for the Playwright trace (a dev diagnostic beside the video). Defaults to false — mint it only if you actually captured one.',
+      },
+    },
+    required: ['key'],
+    additionalProperties: false,
+    $schema: 'http://json-schema.org/draft-07/schema#',
+  },
   create_plan: {
     type: 'object',
     properties: {
@@ -1127,6 +1146,62 @@ export const MCP_TOOL_INPUT_SCHEMAS: Record<keyof typeof TOOL_PERMISSIONS, McpTo
       },
     },
     required: ['projectKey'],
+    additionalProperties: false,
+    $schema: 'http://json-schema.org/draft-07/schema#',
+  },
+  publish_acceptance_result: {
+    type: 'object',
+    properties: {
+      key: {
+        type: 'string',
+        minLength: 1,
+        description:
+          'The work item identifier — the project key, a dash, the number (e.g. "ACME-7"). Case-insensitive.',
+      },
+      videoPathname: {
+        type: 'string',
+        minLength: 1,
+        description:
+          'The `pathname` of the video grant you uploaded to, exactly as it was returned.',
+      },
+      tracePathname: {
+        type: 'string',
+        description: 'The trace grant’s `pathname`, when one was minted and uploaded to.',
+      },
+      chapters: {
+        type: 'array',
+        items: {
+          type: 'object',
+          properties: {
+            label: {
+              type: 'string',
+              minLength: 1,
+              description:
+                'The step this marker jumps to, in the reviewer’s words (e.g. "Open the item").',
+            },
+            tSeconds: {
+              type: 'number',
+              minimum: 0,
+              description: 'Offset into the recording, in seconds, where that step begins.',
+            },
+          },
+          required: ['label', 'tSeconds'],
+          additionalProperties: false,
+        },
+        description:
+          'The chapter markers, from the run’s `chapters.json` — what the reviewer scrubs by. A receipt with none is watchable but not navigable, so send them when the spec wrote them.',
+      },
+      commitSha: {
+        type: 'string',
+        description:
+          'The commit the run recorded at. ALSO THE IDEMPOTENCY KEY: re-publishing the same commit + producedByKey returns the existing receipt instead of superseding it.',
+      },
+      producedByKey: {
+        type: 'string',
+        description: 'The E2E work item that produced the recording, e.g. "ACME-7".',
+      },
+    },
+    required: ['key', 'videoPathname'],
     additionalProperties: false,
     $schema: 'http://json-schema.org/draft-07/schema#',
   },

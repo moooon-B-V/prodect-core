@@ -909,6 +909,26 @@ of a story working, which a human then approves. The full rule is
   watchable (the ≤ ~60s scope, the chaptering, the pacing). A clip under the 15s
   floor is reported as _unpublishable_, which is a different verdict from a
   failure.
+- **⚠️ YOU PUBLISH THE RECEIPT, and until MOTIR-4704 this section did not say so
+  — which is the whole of why that bug exists.** No CI lane uploads the
+  recording; MOTIR-4096 retired the one that did, because a publisher that must
+  be PRESENT in a repository is one no customer repository can meet. Two calls,
+  because a video is far larger than a tool argument can carry:
+  **`create_acceptance_upload`** with the card's key mints a short-lived
+  presigned PUT; **PUT the clip's bytes to that URL** with
+  `Content-Type: video/webm`; then **`publish_acceptance_result`** with the
+  `pathname` it returned, the chapters from `chapters.json`, the `commitSha` and
+  the card's key as `producedByKey`. Pass the E2E card's own key to both — a
+  receipt belongs to the STORY, and the server resolves up to it.
+- **⚠️ NOTHING ELSE MAKES THAT CALL, AND A MISSING PUBLISH LOOKS EXACTLY LIKE A
+  SUCCESSFUL RUN.** This is the design-result warning above, transposed, and it
+  is if anything sharper here: the acceptance GATE rests entirely on the receipt
+  existing, so a spec that goes green, a check that passes and a pull request
+  that merges leave behind a story nobody can watch working — and nothing
+  anywhere goes red. **The confirmation is the receipt `id` the call returns**,
+  and its `status` is `pending`: publishing is not accepting, a person still
+  watches it. A RED run publishes nothing, and that is correct — the receipt
+  records a green run or it records nothing.
 
 ---
 
