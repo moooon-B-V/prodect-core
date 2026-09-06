@@ -868,6 +868,42 @@ const KNOWN: { file: string; address: string; why: string }[] = [
     address: '/p',
     why: 'Historical: the app-hosted /p/<key> path MOTIR-3951 deleted, quoted as the address the retargets replace. Permanent.',
   },
+
+  // ── Forward-looking: the ORGANISATION's Git page (Story MOTIR-4669) ───────
+  //    `design/org-admin/design-notes.md`'s Panel-7 amendment specifies the
+  //    organisation settings NAV, whose `git` row points at a route nothing
+  //    has built: `app/(authed)/settings/organization/` holds `billing`,
+  //    `members`, `security` and `usage`, and no `git`. MOTIR-4680 builds the
+  //    page; this row DELETES ITSELF in that commit, and the `carries no KNOWN
+  //    entry that has stopped applying` check above is what turns a forgotten
+  //    deletion into a red build rather than a quiet one.
+  {
+    file: 'design/org-admin/design-notes.md',
+    address: '/settings/organization/git',
+    why: 'Forward-looking: the org Git page MOTIR-4680 builds. Named in the Panel-7 nav registry as the one NEW row. Delete this entry in the commit that adds the route.',
+  },
+  // ── Forward-looking: the ORG level of the console (Story MOTIR-4337) ─────
+  //    MOTIR-4564's amendment draws Panels 10–12 — the org lookup, the org page
+  //    and the internal-billing classification control. MOTIR-4566 builds both
+  //    routes, on the rail's `Tenants` row, which ships today `disabled` behind
+  //    a `10.1` pill pointing at `/admin/tenants`. Both rows DELETE THEMSELVES
+  //    when that card lands; the `carries no KNOWN entry that has stopped
+  //    applying` check above is what turns a stale exemption red.
+  {
+    file: 'design/platform-admin/design-notes.md',
+    address: '/admin/tenants',
+    why: 'Forward-looking: the ORG lookup MOTIR-4566 builds. The shipped `AdminShell` rail already points its reserved `Tenants` row at this address, so the asset names the route the rail names rather than inventing a sibling.',
+  },
+  {
+    file: 'design/platform-admin/design-notes.md',
+    address: '/admin/tenants/[orgId]',
+    why: 'Forward-looking: the org PAGE MOTIR-4566 builds, and the surface MOTIR-4568 hangs the internal-billing classification control on. Drawn as Panels 11 and 12 of `console.mock.html`.',
+  },
+  {
+    file: 'design/platform-admin/design-notes.md',
+    address: '/admin/orgs',
+    why: 'The route this asset says must NOT exist — cited only to record the choice against it (the rail already reserves `/admin/tenants`, so a sibling `orgs` route would leave the reserved row pointing at nothing). PERMANENT, with no delete-me instruction: if `app/(admin)/admin/orgs/` ever lands, the asset is wrong rather than this row.',
+  },
 ];
 
 type Entry = { file: string; address: string; why: string };
@@ -1651,6 +1687,32 @@ const KNOWN_PATHS: { file: string; path: string; why: string }[] = [
     file: 'design/shell/navigation-pending.mock.html',
     path: 'app/(public)/explore/(square)/loading.tsx',
     why: 'The public rendering surface moved to motir-marketing (MOTIR-3951); this asset is a point-in-time record of the file before it was deleted.',
+  },
+  // ── The ADR Story MOTIR-4337 records itself in (MOTIR-4563) ──────────────
+  //    `docs/decisions/internal-billing-classification.md` is MOTIR-4563's ONE
+  //    deliverable and exists today on the unmerged
+  //    `parent/MOTIR-4337-internal-billing` branch; the design branch is cut
+  //    from `main`, which is why it does not resolve here. Same shape as the
+  //    MOTIR-1789 rows above. Each row DELETES ITSELF when that parent lands.
+  {
+    file: 'design/platform-admin/design-notes.md',
+    path: 'docs/decisions/internal-billing-classification.md',
+    why: "The record MOTIR-4564's amendment draws to — the two flags, the paired same-transaction offset, and the Epic-10 boundary. Written by MOTIR-4563, unmerged when this asset landed.",
+  },
+  {
+    file: 'design/platform-admin/console.mock.html',
+    path: 'docs/decisions/internal-billing-classification.md',
+    why: "The same record, cited in the mock's own amendment comment so a reader of the HTML lands on it without opening the notes. Written by MOTIR-4563, unmerged when this asset landed.",
+  },
+  {
+    file: 'design/billing/design-notes.md',
+    path: 'docs/decisions/internal-billing-classification.md',
+    why: 'The same record, cited by the meta-sweep amendment that corrects this area\'s "META org - no CI line" rows. Written by MOTIR-4563, unmerged when this asset landed.',
+  },
+  {
+    file: 'design/ai-usage/design-notes.md',
+    path: 'docs/decisions/internal-billing-classification.md',
+    why: 'The same record, cited by the meta-sweep amendment that supersedes this area\'s "the balance reads Unlimited" panel. Written by MOTIR-4563, unmerged when this asset landed.',
   },
 ];
 
