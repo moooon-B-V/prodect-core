@@ -556,15 +556,23 @@ thing and declined it. **SATISFIED is Motir's** — it read their repository and
 not need to ask. Dressing the second in the first's clothes tells a user they passed on something
 they were never shown; dressing either in the **done** tick says they did the step.
 
-| row state                                      | marker fill                                                         | glyph           | name                           | meta line                                  |
-| ---------------------------------------------- | ------------------------------------------------------------------- | --------------- | ------------------------------ | ------------------------------------------ |
-| `pending` (`.step.current`)                    | `--el-accent` on `--el-surface-soft`, ring `--el-accent-on-surface` | the step NUMBER | _"A few questions"_            | _"What you're building, and who for"_      |
-| `user-skipped` (`.step.skipped`, NEW)          | `--el-muted`, border `--el-border`                                  | **dash**        | the step's own name            | _"You skipped this"_ — whose choice it was |
-| `substrate-satisfied` (`.step.satisfied`, NEW) | `--el-tint-sky`, border `--el-border`                               | **book / read** | _"Answered from your project"_ | _"Your code and your backlog said it"_     |
-| `done` (unchanged)                             | `--el-success-surface`                                              | check           | the step's own name            | —                                          |
+| row state                                      | marker fill                                                         | glyph             | name                           | meta line                                  |
+| ---------------------------------------------- | ------------------------------------------------------------------- | ----------------- | ------------------------------ | ------------------------------------------ |
+| `pending` (`.step.current`)                    | `--el-accent` on `--el-surface-soft`, ring `--el-accent-on-surface` | **question mark** | _"A few questions"_            | _"What you're building, and who for"_      |
+| `user-skipped` (`.step.skipped`, NEW)          | `--el-muted`, border `--el-border`                                  | **dash**          | the step's own name            | _"You skipped this"_ — whose choice it was |
+| `substrate-satisfied` (`.step.satisfied`, NEW) | `--el-tint-sky`, border `--el-border`                               | **book / read**   | _"Answered from your project"_ | _"Your code and your backlog said it"_     |
+| `done` (unchanged)                             | `--el-success-surface`                                              | check             | the step's own name            | —                                          |
 
 **Not colour-alone** (the standing rule): each of the three pairs a distinct GLYPH and a distinct
 NAME-or-META with its tint, so the states are separable in greyscale and to a screen reader.
+
+**And the pending marker is a QUESTION MARK, not a numeral.** Revision 1 numbered it `3`, which
+invents a global sequence: the rail numbers Connect `1` and Index `2`, and Import carries a glyph, so
+a `3` on the fourth row implies a step count that skips one. It also asserts a position this row does
+not have — the direction stage is not the third of four steps, it is a stage that may not run at all.
+A question mark says what the row is in the one character the marker has. (The SHIPPED `RailStep`
+renders no glyph at all for `current` — an empty accent dot — so the numerals are this mock's own
+flourish and were free to drop.)
 
 ### ⚠️ ONE ROW, AND IT NEVER NAMES A TIER (Yue, 2026-09-06)
 
