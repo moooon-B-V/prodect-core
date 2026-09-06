@@ -3540,6 +3540,22 @@
         "ai-planning": "本项目的 AI 规划——节奏与规划模型——由项目管理员配置。如需调整，请联系管理员。",
         "automation": "项目自动化由项目管理员管理。如需修改规则，请联系管理员。"
       }
+    },
+    "organization": {
+      "eyebrow": "组织设置",
+      "back": "返回 Motir",
+      "nav": {
+        "group": {
+          "general": "通用",
+          "access": "访问与权限",
+          "billing": "账单"
+        },
+        "organization": "组织",
+        "members": "成员",
+        "security": "安全",
+        "usage": "用量与费用",
+        "billing": "账单与套餐"
+      }
     }
   },
   "boards": {

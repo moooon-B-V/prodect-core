@@ -46,8 +46,15 @@ import {
   isAccountSettingsEntryActive,
   isAccountSettingsPath,
 } from '@/lib/settings/accountSettingsNav';
+import {
+  groupOrganizationSettingsNav,
+  isOrganizationSettingsEntryActive,
+  isOrganizationSettingsPath,
+  visibleOrganizationSettingsNav,
+} from '@/lib/settings/organizationSettingsNav';
 import { SettingsSidebarHeader } from './SettingsSidebarHeader';
 import { AccountSidebarHeader } from './AccountSidebarHeader';
+import { OrganizationSidebarHeader } from './OrganizationSidebarHeader';
 import { AUTHED_LANDING_PATH } from '@/lib/navigation/landing';
 
 // The signed-in navigation rail. Composes the 1.5.2 Sidebar primitive with the
@@ -105,6 +112,24 @@ export interface SidebarNavProps {
    * session (the same `{ name, email }` the TopNav user menu shows).
    */
   user: { name: string; email: string };
+  /**
+   * The ACTIVE ORGANISATION (Story MOTIR-4669 · MOTIR-4710) — its name for the
+   * organisation-settings area rail header, and whether the actor administers it
+   * for the registry's row filter. Resolved once in the (authed) layout, from the
+   * same `resolveActiveOrganization` call the top bar's org control already makes.
+   *
+   * ⚠️ ABSENT DEFAULTS CLOSED, exactly as `settingsPermissions` does: with no
+   * organisation the area rail renders its General group alone rather than
+   * revealing four admin rows to a caller that forgot to thread the prop.
+   */
+  organization?: { name: string; isOrgAdmin: boolean } | null;
+  /**
+   * Whether this build has the commercial surface (`isCloudBilling()`) — gates
+   * the organisation nav's `Billing & plans` row, which `notFound()`s off cloud.
+   * The SAME predicate the org menu already gates its own Billing row on, so the
+   * two doors onto that page cannot disagree about whether it exists.
+   */
+  billingAvailable?: boolean;
   /**
    * The active org reveals the WORKSPACE tier (≥2 workspaces the viewer belongs
    * to — `lib/workspaces/tierDisclosure.ts`). Retargets the no-project settings
@@ -167,6 +192,8 @@ export function SidebarNav({
   variant = 'rail',
   settingsPermissions,
   user,
+  organization = null,
+  billingAvailable = false,
   workspaceTierRevealed = false,
   publicProjectsAvailable = false,
   helpMenu,
@@ -209,6 +236,50 @@ export function SidebarNav({
   // this actor holds. Built here with `held`, for the same reason: the rail and
   // the area door must filter on one answer, not two.
   const availability = { publicProjectsAvailable };
+
+  // ORGANISATION-settings AREA (Story MOTIR-4669 · MOTIR-4710): the third and
+  // last settings tier to become an area. Like the account branch it does NOT
+  // gate on an active project — an organisation is configured with no project
+  // selected, and the rail's own bottom `Settings` row points here in exactly
+  // that state — and the header names the ORGANISATION rather than the project
+  // or the user.
+  //
+  // ⚠️ THE ROW FILTER IS NOT THE PAGE'S GATE. `organization-tier.md` §6d gates
+  // this area PER SECTION, because below the workspace-tier reveal the index page
+  // hosts two tiers' sections; the registry decides which ROWS exist and the
+  // index page keeps its own per-section treatment untouched. That is why
+  // `organization` (the index row) carries no admin flag: it is the only route to
+  // the folded-in workspace sections, and Leave workspace has no other surface
+  // anywhere in the product.
+  if (isOrganizationSettingsPath(pathname)) {
+    const orgSections: SidebarSection[] = groupOrganizationSettingsNav(
+      visibleOrganizationSettingsNav({ isOrgAdmin: organization?.isOrgAdmin ?? false }, undefined, {
+        billingAvailable,
+      }),
+    ).map(({ group, entries }) => ({
+      id: `org-settings-${group}`,
+      label: ts(`organization.nav.group.${group}`),
+      items: entries.map((entry) => ({
+        icon: <entry.icon />,
+        label: ts(`organization.nav.${entry.labelKey}`),
+        href: entry.href,
+        active: isOrganizationSettingsEntryActive(entry, pathname),
+      })),
+    }));
+    return (
+      <Sidebar
+        aria-label={ts('organization.eyebrow')}
+        header={
+          organization ? (
+            <OrganizationSidebarHeader organization={organization} collapsed={collapsed} />
+          ) : undefined
+        }
+        sections={orgSections}
+        footer={footer}
+        collapsed={isDrawer ? false : undefined}
+      />
+    );
+  }
 
   // Account-settings AREA (Subtask 7.8.12): swap the project nav for the
   // registry-driven account-settings nav. Unlike the project area this does NOT

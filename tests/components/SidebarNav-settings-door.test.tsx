@@ -174,13 +174,29 @@ describe('the settings door yields to a more specific workspace sub-route', () =
 
   it.each([
     ['/settings', 'the settings home itself'],
-    ['/settings/organization', 'the org home the door points at below the tier reveal'],
     ['/settings/workspace', "the workspace area's own page"],
   ])('reads current at %s — %s', (path) => {
     pathname = path;
     renderRail(ADMIN, PROJECT, true);
     expect(current()).toBe('page');
     expect(currentRows()).toHaveLength(1);
+  });
+
+  it('⚠️ `/settings/organization` no longer reaches this predicate AT ALL (MOTIR-4710)', () => {
+    // This route was a row in THIS list until organisation settings became an
+    // AREA. It is now the third of three settings tiers with its own rail: the
+    // door's `active` clause is never evaluated there, because `SidebarNav`
+    // returns the organisation area's own Sidebar before it builds a bottom
+    // section — exactly as it already did for `/settings/project*` and
+    // `/settings/account*`.
+    //
+    // The case is REPLACED rather than deleted, because "no bottom Settings row
+    // here" is the new contract and deleting the line would leave the change
+    // recorded nowhere. The door's other four clauses are unaffected and still
+    // exercised above and below.
+    pathname = '/settings/organization';
+    renderRail(ADMIN, PROJECT, true);
+    expect(settingsRow()).toBeNull();
   });
 
   it.each([

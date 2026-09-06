@@ -3540,6 +3540,22 @@
         "ai-planning": "AI planning for this project — its cadence and its planner model — is configured by project admins. Ask an admin if it needs changing.",
         "automation": "Project automation is managed by project admins. Ask an admin if you need a rule changed."
       }
+    },
+    "organization": {
+      "eyebrow": "Organisation settings",
+      "back": "Back to Motir",
+      "nav": {
+        "group": {
+          "general": "General",
+          "access": "Access",
+          "billing": "Billing"
+        },
+        "organization": "Organisation",
+        "members": "Members",
+        "security": "Security",
+        "usage": "Usage & cost",
+        "billing": "Billing & plans"
+      }
     }
   },
   "boards": {
