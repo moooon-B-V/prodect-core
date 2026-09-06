@@ -273,6 +273,30 @@ export interface JobContextBag {
   // (`lib/ai/lessonCapture.ts`); the call sites use it as a computed key so this
   // string has exactly one home on this side of the boundary.
   recordPlanningMistakes?: boolean;
+  // Is this the project's FIRST plan? Mirrors `Project.onboardingRanAt == null`
+  // (the immutable onboarding marker of Subtask 7.4 / MOTIR-1264, stamped by
+  // `plansService.approvePlan`) — MOTIR-4736 producer ↔ MOTIR-4737 consumer.
+  //
+  // ⚠️ ONBOARDING IS A FACT ABOUT HISTORY, NOT ABOUT THE TREE. motir-ai used to
+  // infer it from an EMPTY committed tree (`mayPlanTheFirstTree`, MOTIR-4178),
+  // which is correct for the start-fresh path and wrong for the migrate wizard —
+  // the one onboarding journey that DELIBERATELY has work items before its first
+  // plan, because its optional import step (MOTIR-934 / MOTIR-1643) writes a
+  // Jira / Linear / GitHub / Plane / CSV backlog first and only then generates.
+  // Such a run was read as continued planning, so it got the anchored arm and the
+  // continued-planning lesson bucket instead of the onboarding framing.
+  //
+  // ⚠️ ABSENT IS NOT `false`. `false` means *this project has already had a plan
+  // approved*; ABSENT means *the producer predates this field* and the consumer
+  // falls back to its own inference — so every planning submit sends it
+  // UNCONDITIONALLY, never spread-conditionally like `code` and `repositories`,
+  // whose absence means "this workspace/project has none".
+  //
+  // The KEY is spelled once, in `ONBOARDING_CONTEXT_FIELD`
+  // (`lib/ai/onboardingContext.ts`), and the answer once in
+  // `onboardingContextFor`; the call sites use the constant as a computed key so
+  // this string has exactly one home on this side of the boundary.
+  onboarding?: boolean;
   // The project's existing work-item tree summary (MOTIR-1259) — the items the
   // user already has in the project, passed to motir-ai's discovery handler so
   // tier drafting is grounded in what already exists, not a blank slate. Each
