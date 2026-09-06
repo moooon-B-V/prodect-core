@@ -659,7 +659,11 @@ export function IssueQuickViewPanel(props: IssueQuickViewPanelProps) {
             canPlan={data.canPlan}
             archived={data.archived != null}
             statusCategory={data.statusCategory}
-            onActivate={props.onClose}
+            // ⚠️ NO `onActivate` (MOTIR-4730). This used to be `props.onClose`,
+            // handing off by dismissing the peek as the workspace opened. The
+            // workspace is an OVERLAY now and the design settled this case: it
+            // opens ABOVE the quick view and `?peek=` stays in the address, so
+            // closing it returns the reader to the peek they launched from.
           />
         )}
         {/* ABSENT for an un-materialized `add` — there is no route, and a
