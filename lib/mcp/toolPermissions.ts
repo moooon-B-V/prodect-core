@@ -191,6 +191,18 @@ export const TOOL_PERMISSIONS: Record<McpToolName, PermissionKey> = {
   // therefore adds no credential and no trust; it only stops requiring a script
   // to be present in the repository. `CLI_TOKEN_GRANT` is NOT widened here.
   publish_design_result: 'work_item:edit',
+  // The ACCEPTANCE publish pair (MOTIR-4704) — the SAME key again, and not by
+  // analogy: `ACCEPTANCE_PUBLISH_PERMISSION` in `lib/tokens/grant.ts` IS
+  // `work_item:edit`, and the service's own `resolveStory` asserts it on the
+  // story's project (MOTIR-2365 put it there after `createUploadTokens` was
+  // found reachable with a session and a story id alone). §3's rule is
+  // satisfied by construction: what is declared here is what the gate applies.
+  // ⚠️ `create_acceptance_upload` MINTS a presigned write against the
+  // workspace's object store, so it is a WRITE key even though it persists no
+  // row — declaring it a read would hand out object-store grants on a browse
+  // permission.
+  create_acceptance_upload: 'work_item:edit',
+  publish_acceptance_result: 'work_item:edit',
   // `link_pull_request` (Story MOTIR-3525 · MOTIR-3526) — declaring which work
   // item a pull request delivers is EDITING that work item, so it takes the same
   // key the picker's own write path sits behind, and the SERVICE asserts it too

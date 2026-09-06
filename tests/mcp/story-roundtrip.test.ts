@@ -347,6 +347,16 @@ describe('MCP story suite — real /api/mcp endpoint', () => {
             },
           ],
         },
+        // MOTIR-4704 — the same argument one artifact over. A cross-tenant
+        // acceptance publish would put a stranger's RECORDING on A's story, and
+        // the mint half is worse than the register half: it hands back a
+        // presigned PUT into A's object store. Both must read not-found before
+        // a grant is minted or a pathname is registered.
+        create_acceptance_upload: { key: item1 },
+        publish_acceptance_result: {
+          key: item1,
+          videoPathname: 'acceptance/rogue/rogue.webm',
+        },
         // MOTIR-3526. Aimed at tenant A's item like its neighbours: the ITEM key
         // must read as not-found BEFORE the repository is looked at, so a
         // non-member learns neither that the card exists nor which repositories
@@ -808,6 +818,13 @@ describe('MCP story suite — real /api/mcp endpoint', () => {
               contentBase64: 'eA==',
             },
           ],
+        },
+        // MOTIR-4704 — the caller's OWN story. Write-scoped tools, so the
+        // read-only-token loop asserts both are REFUSED at the scope gate.
+        create_acceptance_upload: { key: item1 },
+        publish_acceptance_result: {
+          key: item1,
+          videoPathname: 'acceptance/scoped/scoped.webm',
         },
         // MOTIR-3526 — the caller's OWN item. A write-scoped tool, so the
         // read-only-token loop asserts it is REFUSED at the scope gate; the

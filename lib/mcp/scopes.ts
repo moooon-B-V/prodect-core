@@ -261,6 +261,13 @@ export const TOOL_SCOPES: Record<McpToolName, TokenScope> = {
   // A WRITE: it puts a row on the item and spends the org's storage quota.
   attach_file: 'work_items:write',
   publish_design_result: 'work_items:write',
+  // The acceptance publish pair (MOTIR-4704). Both are writes on the same
+  // bucket as the design publisher beside them: one mints an object-store grant
+  // and spends the org's storage quota, the other puts the receipt row on the
+  // story. The real gate is the PERMISSION (`work_item:edit`, in
+  // `toolPermissions.ts`); this deprecated table only needs the nearest bucket.
+  create_acceptance_upload: 'work_items:write',
+  publish_acceptance_result: 'work_items:write',
   // `link_pull_request` (MOTIR-3526). A WRITE — it sets the change-request row's
   // `work_item_id`, and may create the row itself. This legacy table has no
   // integration-link axis finer than `integration`, which is the MERGE report's
