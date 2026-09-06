@@ -503,3 +503,158 @@ if one were needed, that is a NEW `design/` subtask, not a code workaround.
 - **AA holds** — every coloured chip/tile carries the hue in the tint background with `--el-text-strong`
   ink; dark parity verified by toggling `data-theme="dark"` (every `--el-*` re-skins through the
   `[data-theme='dark']` `--color-*` overrides).
+
+---
+
+## AMENDMENT (2026-09-06 · MOTIR-4755) — a step SATISFIED BY THE SUBSTRATE, not by the user
+
+**Story:** [MOTIR-4753] _The DEPTH of onboarding is a judgement about the project's SUBSTRATE._
+**Panel added:** **Panel 5**. Everything above is unchanged.
+
+### The premise this card was written on, AMENDED ON THE RECORD
+
+The card opens: _"The migrate wizard's asset draws its step rail with `Discovery (step 4, 7.2.1)` as
+an unconditional row, and it draws exactly one way for a step not to run: import's SKIP."_ **Both
+halves are false, and both were checkable in one read at plan time.** Verified (rung 2) before
+drawing:
+
+- **The asset draws NO discovery row at all.** `grep -n 'Discovery' onboarding-migrate.mock.html`
+  returns exactly one line — `/* ---- Discovery (step 4, 7.2.1) ---- */`, a **CSS section comment**,
+  left from an earlier revision. All three rails in the asset draw Connect · Index · Import work
+  items and stop.
+- **And that is FAITHFUL to the shipped wizard**, which is why nobody noticed. `MigrateWizard.tsx`'s
+  `Rail` renders exactly those three `RailStep`s and pushes to `/onboarding/discovery` from the
+  discovery step onward — the direction tiers are a different route, drawn nowhere in this rail.
+- **The rail draws no SKIPPED state either.** `RailStep`'s state union is
+  `'done' | 'current' | 'upcoming' | 'optional'`, and a skipped import takes **`done`** (`rank > 2`),
+  so today it is drawn identically to one the user completed. Import's skip is real as **copy** — an
+  `onboardingMigrate.import.skip` button and _"Skip this if you have no backlog to bring in"_ — and
+  the card quotes that correctly; what it does not have is a rail treatment to contrast against.
+
+**The deliverable is unchanged and is if anything clearer**: this panel does not amend a row, it
+ADDS one, in three states, and it has to DESIGN the user-skipped treatment rather than reproduce it.
+The card's own _"draw the import row's skipped state beside it"_ already asked for exactly that.
+
+### What Panel 5 depicts, and where each behaviour came from
+
+**GROUNDED, NOT INVENTED.** Every behaviour below is read off a sibling card's `descriptionMd`; this
+asset decides how it LOOKS and nothing about what it DOES.
+
+| depicted                                                           | grounded in                                                                                                        |
+| ------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------ |
+| A direction row that does not run because the substrate answers it | **MOTIR-4759** — _`discovery` becomes a SATISFIABLE migrate step, not a mandatory one_                             |
+| That the wizard ADVANCES past it rather than the user skipping it  | MOTIR-4759's _"the wizard advances past it when the substrate read says the repository and the backlog answer it"_ |
+| The FLOOR — no repository and no backlog ⇒ the questions asked     | MOTIR-4759's _"the floor case still walks the tiers"_, and **MOTIR-4758**'s guaranteed floor (motir-ai)            |
+| That the run RECORDS which way it went, so the surface can say so  | MOTIR-4759's _"the run records which way it went"_ — the provenance line is that record, rendered                  |
+| That the entrance routes a repo-carrying project here by DEFAULT   | **MOTIR-4756** — the substrate read + `shouldRouteToMigrateWizard` deciding on both inputs                         |
+| The two questions the satisfied row claims are answered            | **MOTIR-4758** — the test is the floor tiers' own questions (What/Who · In-v1/Out)                                 |
+
+### The three states, and why none of them is the `done` tick
+
+A step can fail to run for two opposite reasons. **SKIPPED is the user's** — they were offered a
+thing and declined it. **SATISFIED is Motir's** — it read their repository and their backlog and did
+not need to ask. Dressing the second in the first's clothes tells a user they passed on something
+they were never shown; dressing either in the **done** tick says they did the step.
+
+| row state                                      | marker fill                                                         | glyph             | name                           | meta line                                  |
+| ---------------------------------------------- | ------------------------------------------------------------------- | ----------------- | ------------------------------ | ------------------------------------------ |
+| `pending` (`.step.current`)                    | `--el-accent` on `--el-surface-soft`, ring `--el-accent-on-surface` | **question mark** | _"A few questions"_            | _"What you're building, and who for"_      |
+| `user-skipped` (`.step.skipped`, NEW)          | `--el-muted`, border `--el-border`                                  | **dash**          | the step's own name            | _"You skipped this"_ — whose choice it was |
+| `substrate-satisfied` (`.step.satisfied`, NEW) | `--el-tint-sky`, border `--el-border`                               | **book / read**   | _"Answered from your project"_ | _"Your code and your backlog said it"_     |
+| `done` (unchanged)                             | `--el-success-surface`                                              | check             | the step's own name            | —                                          |
+
+**Not colour-alone** (the standing rule): each of the three pairs a distinct GLYPH and a distinct
+NAME-or-META with its tint, so the states are separable in greyscale and to a screen reader.
+
+**And the pending marker is a QUESTION MARK, not a numeral.** Revision 1 numbered it `3`, which
+invents a global sequence: the rail numbers Connect `1` and Index `2`, and Import carries a glyph, so
+a `3` on the fourth row implies a step count that skips one. It also asserts a position this row does
+not have — the direction stage is not the third of four steps, it is a stage that may not run at all.
+A question mark says what the row is in the one character the marker has. (The SHIPPED `RailStep`
+renders no glyph at all for `current` — an empty accent dot — so the numerals are this mock's own
+flourish and were free to drop.)
+
+### ⚠️ ONE ROW, AND IT NEVER NAMES A TIER (Yue, 2026-09-06)
+
+**An earlier revision of this panel drew the direction stage as FOUR rows — Discovery, Vision,
+Feasibility, Validation — and that was wrong for the same reason "Pre-plan" was wrong.** Those are
+the planner's identifiers (`DirectionDocKind`, `producibleTiers`) for questions the user is simply
+being asked. A rail that lists them by name teaches a stranger four words before it tells them
+anything, and it does it on the first surface they ever see. **This is MOTIR-4757's rule one surface
+over** — internal vocabulary travelling out of the rule corpus into user-facing text, written in
+good faith by somebody who had just been reading the corpus — and a design asset is exactly where
+that gets laundered into looking decided.
+
+So the rail carries **one row** for the whole direction stage:
+
+- **pending** — named _"A few questions"_, meta _"What you're building, and who for"_. The user is
+  told what the step IS and what it is about; which four documents it produces is the planner's
+  business.
+- **satisfied** — the NAME carries the outcome, _"Answered from your project"_, because a row the
+  user never saw has to explain itself in the one place they meet it. The meta line says which part
+  of the project answered.
+
+**And the FLOOR rail collapses with it.** It used to draw all four tiers to make the point that they
+are all walked; it now draws the one row in its pending state, which makes the same point without
+the vocabulary. Nothing about the floor's BEHAVIOUR changed — every question is still asked, and no
+state above is reachable from there.
+
+**⚠️ AND THE FLOOR'S SET-UP ROWS ARE `upcoming` / `optional`, NOT `skipped`.** A first draft drew
+Connect with a dash and the meta line _"No repository"_, which reads as _the user skipped connect_ —
+and **connect and index have no skip control**, so that is a state the machine cannot produce. A
+design asset that draws one is worse than useless: the next person builds it. `skipped` is a thing
+the user PRESSED, and the only step that offers it is import.
+
+**What the consuming card owes is therefore SMALLER than the first revision implied:** one rail row,
+not a four-row group. MOTIR-4759's sizing is amended accordingly.
+
+**The board CHROME still says "discovery"** — the panel label, the state captions, this note. That is
+deliberate and is the distinction the whole section is about: chrome is addressed to whoever builds
+the surface, and the rail is addressed to whoever uses it. Only one of the two is a place the
+planner's own nouns may appear.
+
+### The PROVENANCE line — a statement, never a gate
+
+Drawn in the hand-off panel, on the surface the user lands on:
+
+> _Motir planned from **acme/widgets** and **214 imported work items**, so it did not ask you the
+> direction questions. Everything below is a proposal — change anything before you add it._
+
+- **It is not a question and not a confirmation**, and the flow does not wait on it. The depth
+  decision is the planner's (MOTIR-4758) and what the user reviews is the PLAN it produced, so this
+  is provenance, not an approval.
+- **The escape beside it is a button, not a gate**: _"Answer the questions anyway"_. A plan that came
+  out thin from a run that never asked anything needs the user able to see why and to reach the
+  interview; it does not need the interview made mandatory again.
+- Ink is **`--el-text-secondary`** on **`--el-surface-soft`** (6.51:1). `--el-text-muted` there is
+  4.34:1 and would fail AA — the standing pair-not-ink rule, which is why the annotation ink in this
+  panel is `--el-text-secondary` throughout.
+
+### The ACCESS PATH
+
+The existing-project tile on `/onboarding` (composes `design/onboarding-entrance/`), drawn at board
+scale so a reader sees the door and not only the room. **It is no longer the only way in** — per
+MOTIR-4756 the entrance now routes a project with a connected repository here by DEFAULT.
+
+**Its copy is the SHIPPED copy, verbatim** — `onboarding.entrance.importTitle` / `importDesc` — and
+**this card amends no entrance string**. An earlier draft of this panel rewrote the tile's body to
+promise that Motir reads first; that promise is already in the shipped copy (_"Connect your
+repository and Motir reads your code, then plans on top of what's already there"_), and inventing a
+second wording would have left an unowned deliverable in a design asset with no card to build it —
+the deferral-is-a-card shape, one layer over. Drawn as it ships, the door already makes the promise
+the rail below keeps.
+
+### Vocabulary
+
+**No panel, label or annotation in this asset uses "Pre-plan"** — it is corpus vocabulary, not the
+product's, and the sibling **MOTIR-4757** is retiring it from the two onboarding topbar strings. The
+product's own noun is used throughout: **your direction**.
+
+### Tokens this amendment adds to the asset (no new colours)
+
+`.step.satisfied` · `.step.skipped` · `.provenance` · `.door` · `.rail-mini` · `.triptych` — composed
+entirely from tokens the asset already declares: `--el-tint-sky`, `--el-muted`, `--el-surface`,
+`--el-surface-soft`, `--el-card`, `--el-card-icon-bg` / `--el-card-icon-fg`, `--el-border`,
+`--el-text-strong`, `--el-text-secondary`, and the shape tokens `--radius-card` / `--radius-control` /
+`--radius-badge`. **No raw hex, no Tier-0 `--color-*`, no raw `rounded-*` / `p-*` / `h-*` on a
+surface's own box.**
