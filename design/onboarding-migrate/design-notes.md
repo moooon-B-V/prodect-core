@@ -599,6 +599,12 @@ are all walked; it now draws the one row in its pending state, which makes the s
 the vocabulary. Nothing about the floor's BEHAVIOUR changed — every question is still asked, and no
 state above is reachable from there.
 
+**⚠️ AND THE FLOOR'S SET-UP ROWS ARE `upcoming` / `optional`, NOT `skipped`.** A first draft drew
+Connect with a dash and the meta line _"No repository"_, which reads as _the user skipped connect_ —
+and **connect and index have no skip control**, so that is a state the machine cannot produce. A
+design asset that draws one is worse than useless: the next person builds it. `skipped` is a thing
+the user PRESSED, and the only step that offers it is import.
+
 **What the consuming card owes is therefore SMALLER than the first revision implied:** one rail row,
 not a four-row group. MOTIR-4759's sizing is amended accordingly.
 
