@@ -83,7 +83,7 @@
         --el-text-faint: #a4a097;
 
         /* ── Surfaces ─────────────────────────────────────────────────── */
-        --el-page-bg: #ffffff;
+        --el-page-bg: var(--color-background);
         --el-card: #ffffff;
         --el-surface: #f6f5f4;
         --el-surface-soft: #fafaf9;
@@ -92,6 +92,7 @@
         /* ── Borders ──────────────────────────────────────────────────── */
         --el-border: #e5e3df;
         --el-border-soft: #ede9e4;
+        --el-border-strong: #c8c4be;
 
         /* ── The OVERLAY layer (MOTIR-4726) ───────────────────────────────
            Read off `packages/design-system/theme.css`, not invented. The scrim
@@ -164,16 +165,23 @@
          `:root`'s already-resolved value. ── */
       :root {
         /* Tier 0 — the default `motir` palette */
+        --color-background: #ffffff;
         --color-primary-fill: #5645d4;
         --color-primary-foreground: #ffffff;
+        --color-primary-pressed: #4534b3;
         --color-accent: #ff64c8;
+        --color-link: #0070d2;
       }
       :root,
       [data-palette] {
         /* Tier 3 — the element layer */
         --el-accent: var(--color-primary-fill);
         --el-accent-text: var(--color-primary-foreground);
+        --el-accent-pressed: var(--color-primary-pressed);
         --el-highlight: var(--color-accent);
+        --el-link: var(--color-link);
+        /* The mono stack, as `theme.css` declares it — Cybercore's label reads it. */
+        --font-mono: var(--font-mono-source, ui-monospace), 'SF Mono', Menlo, monospace;
         /* The accent AS TEXT / icon on a page surface (MOTIR-4726) — theme.css's
            `--el-accent-on-surface: var(--color-primary)`, which is the same
            value this block already carries as `--color-primary-fill`, so it
@@ -1475,6 +1483,15 @@
       }
 
       /* ── style-aware showcase (sheet 5): one button, six design styles ── */
+      /* ══ SHEET 5 — the eleven registered styles ═══════════════════════════
+         REDRAWN (MOTIR-4742). This grid used to carry six tiles painted by
+         private `.hc-editorial` / `.hc-soft` / … classes in raw hex, which
+         showed the intended LOOK and not the intended MECHANISM — nothing in it
+         was copyable into the style layer. It now renders the ELEVEN registered
+         styles through the same `@scope ([data-style='X']) to ([data-style])`
+         rules `design-notes.md` § *The STYLE MATRIX* carries verbatim, over the
+         `--el-*` token layer this file already declares. So what you see here is
+         what `theme.css` will paint, not an impression of it. */
       .stylegrid {
         display: grid;
         grid-template-columns: repeat(3, 1fr);
@@ -1511,140 +1528,503 @@
         display: flex;
         align-items: center;
         justify-content: center;
+        gap: 18px;
         min-height: 104px;
         padding: 26px 16px;
+        background: var(--el-page-bg);
       }
-      /* shared button layout; each style overrides the visual */
+
+      .st-cap {
+        padding: 8px 12px 10px;
+        border-top: 1px solid var(--el-border-soft);
+        background: var(--el-surface-soft);
+        color: var(--el-text-secondary);
+        font-size: 10.5px;
+        line-height: 1.45;
+      }
+
+      /* ── The nested DARK register ───────────────────────────────────────────
+         A custom property's `var()` is substituted where the property is
+         DECLARED, not where it is used — so re-declaring only the Tier-0 half
+         under `[data-theme='dark']` would leave `--el-*` frozen at the LIGHT
+         values computed on `:root`, and a "dark" tile would render light
+         (MOTIR-3592). Both layers are therefore re-emitted here. Used by the
+         Cybercore tile, whose style is dark-FIRST: drawing it in the light
+         register would be drawing it in a register the style does not live in. */
+      /* ⚠️ PLACED BEFORE the [data-theme='dark'] block. A custom property's
+         `var()` is substituted where the property is DECLARED, so re-emitting
+         the Tier-3 binding on `[data-theme]` is what lets a nested dark scope
+         recompute `--el-page-bg` against the Tier-0 background IT declares —
+         rather than inheriting the literal `:root` already resolved
+         (`tests/design-dark-parity.test.ts`, MOTIR-3592). */
+      [data-theme] {
+        --el-page-bg: var(--color-background);
+      }
+      [data-theme='dark'] {
+        --color-background: #0f0f0f;
+        --color-primary-fill: #6c5cdd;
+        --color-primary-foreground: #ffffff;
+        --color-accent: #ff64c8;
+        --el-text: #f3f4f6;
+        --el-text-strong: #e5e5e5;
+        --el-text-secondary: #a4a097;
+        --el-page-bg: var(--color-background);
+        --el-card: #0f0f0f;
+        --el-surface: #1a1a1a;
+        --el-surface-soft: #161616;
+        --el-border: #2a2a2a;
+        --el-border-soft: #1f1f1f;
+        --el-border-strong: #3a3a3a;
+        --el-accent: #6c5cdd;
+        --el-accent-text: #ffffff;
+        --el-accent-pressed: #5645d4;
+        --el-highlight: #ff64c8;
+        --el-accent-wash: color-mix(in srgb, var(--el-accent) 11%, var(--el-page-bg));
+      }
+      /* Cybercore's own canvas: the faint tech grid, built from `currentColor`
+         exactly as `theme.css`'s `[data-style='cybercore-y2k']` body rule does,
+         so it picks up whatever hue the palette provides and pins none. */
+      [data-style='cybercore-y2k'] .st-stage {
+        background-image:
+          linear-gradient(color-mix(in srgb, currentColor 6%, transparent) 1px, transparent 1px),
+          linear-gradient(
+            90deg,
+            color-mix(in srgb, currentColor 6%, transparent) 1px,
+            transparent 1px
+          );
+        background-size: 32px 32px;
+        background-position: center top;
+        color: var(--el-text);
+      }
+
+      /* ── The SHAPE/MATERIAL token layer, per style ──────────────────────────
+         This asset is standalone HTML and does not load `theme.css`, so the
+         tokens sheet 5 reads are declared here — the same way the `--el-*` block
+         at the top of this file mirrors the element layer. Values are the ones
+         `packages/design-system/theme.css` resolves for each `[data-style]`
+         block; only the tokens this sheet actually paints with are mirrored, so
+         there is no second copy of the shape scale to drift. */
+      [data-style] {
+        --radius-badge: 999px;
+        --height-btn-md: 40px;
+        --spacing-btn-x: 18px;
+      }
+      [data-style='soft-playful'],
+      [data-style='glassmorphism'],
+      [data-style='aurora'],
+      [data-style='hand-drawn-indie'],
+      [data-style='neumorphism'] {
+        --spacing-btn-x: 20px;
+      }
+      [data-style='swiss-minimal-flat'] {
+        --radius-badge: 2px;
+        --spacing-btn-x: 16px;
+      }
+      [data-style='neo-brutalism'] {
+        --radius-badge: 0;
+        --spacing-btn-x: 16px;
+      }
+      [data-style='cybercore-y2k'] {
+        --radius-badge: 2px;
+      }
+      [data-style='3d-immersive'],
+      [data-style='retrofuturism'] {
+        --spacing-btn-x: 22px;
+      }
+      [data-style='hand-drawn-indie'] {
+        --radius-badge: 9px 26px 11px 22px / 22px 11px 24px 9px;
+      }
+      [data-style='glassmorphism'] {
+        --glass-wash: 42%;
+        --glass-blur: 18px;
+        --glass-saturate: 180%;
+        --glass-sheen: rgba(255, 255, 255, 0.22);
+        --glass-rim: rgba(255, 255, 255, 0.55);
+      }
+      [data-style='aurora'] {
+        --aurora-sheen: 7%;
+        --aurora-glow: 22%;
+      }
+      [data-style='neumorphism'] {
+        --neu-distance: 6px;
+        --neu-blur: 16px;
+        --neu-light: rgba(255, 255, 255, 0.6);
+        --neu-shadow: rgba(20, 20, 30, 0.16);
+      }
+      [data-style='retrofuturism'] {
+        --retro-spec: 44%;
+        --retro-bevel-light: 44%;
+        --retro-glow: 32%;
+      }
+      /* Glassmorphism's own canvas: the vibrant wash the frost is frosting.
+         Mirrors `theme.css`'s `[data-style='glassmorphism']` body rule — without
+         something behind it a `backdrop-filter` has nothing to blur, and the
+         tile would show a flat pill under a caption claiming translucency. */
+      [data-style='glassmorphism'] .st-stage {
+        background-image:
+          radial-gradient(
+            85% 80% at 6% -12%,
+            color-mix(in srgb, var(--el-accent) var(--glass-wash), transparent),
+            transparent 62%
+          ),
+          radial-gradient(
+            80% 75% at 110% 4%,
+            color-mix(in srgb, var(--el-highlight) var(--glass-wash), transparent),
+            transparent 60%
+          ),
+          radial-gradient(
+            95% 90% at 50% 120%,
+            color-mix(in srgb, var(--el-link) var(--glass-wash), transparent),
+            transparent 62%
+          );
+      }
+
+      /* The one style that already treats this control: the physical key's base
+         edge, read by the components through a `var()` seam because their inline
+         `box-shadow` beats every rule (MOTIR-3522). Mirrored here so tile 8 shows
+         the depth that actually ships. */
+      [data-style='3d-immersive'] {
+        --plan-hero-shadow:
+          0 4px 0 0 var(--el-accent-pressed),
+          inset 0 1px 0 color-mix(in srgb, var(--el-accent-text) 38%, transparent),
+          inset 0 0 0 1px color-mix(in srgb, var(--el-accent-text) 18%, transparent),
+          0 9px 18px -5px color-mix(in srgb, var(--el-accent) 75%, transparent),
+          0 0 22px -3px color-mix(in srgb, var(--el-highlight) 50%, transparent);
+        --plan-orb-shadow:
+          0 5px 0 0 var(--el-accent-pressed),
+          inset 0 1px 0 color-mix(in srgb, var(--el-accent-text) 40%, transparent),
+          0 12px 24px -6px color-mix(in srgb, var(--el-accent) 80%, transparent),
+          0 0 28px -2px color-mix(in srgb, var(--el-highlight) 55%, transparent);
+      }
+
+      /* ── The two hero controls, as the app renders them ─────────────────────
+         Layout + the BASE (warm-editorial) look, which is the components' own
+         `var()` fallback — the pill's `HERO_STYLE` and the orb's `ORB_STYLE`.
+         Shape comes from the tokens above, never from a number typed here. */
       .hc {
         position: relative;
         display: inline-flex;
         align-items: center;
-        gap: 7px;
-        padding: 9px 17px 9px 14px;
+        justify-content: center;
+        gap: 8px;
+        overflow: hidden;
+        height: var(--height-btn-md);
+        border-radius: var(--radius-badge);
+        padding-inline: var(--spacing-btn-x);
         font-size: 12.5px;
-        font-weight: 650;
+        font-weight: 600;
         white-space: nowrap;
         cursor: default;
+        color: var(--el-accent-text);
+        background-image: linear-gradient(
+          135deg,
+          var(--el-accent),
+          color-mix(in srgb, var(--el-accent) 86%, var(--el-highlight))
+        );
+        box-shadow: var(
+          --plan-hero-shadow,
+          inset 0 1px 0 color-mix(in srgb, var(--el-accent-text) 38%, transparent),
+          inset 0 0 0 1px color-mix(in srgb, var(--el-accent-text) 18%, transparent),
+          0 6px 18px -5px color-mix(in srgb, var(--el-accent) 75%, transparent),
+          0 0 22px -3px color-mix(in srgb, var(--el-highlight) 50%, transparent)
+        );
       }
       .hc .spark {
         font-size: 14px;
         line-height: 1;
       }
-      /* 1 · Warm Editorial (default) — gradient + glow + shimmer */
-      .st-editorial .st-stage {
-        background: radial-gradient(120% 150% at 80% -20%, #efeafd, #faf9fb 60%, #fff);
+      /* The floating M orb. The first stop's mix is `--orb-lit-mix`, read from
+         the token layer — NOT a percentage typed here. It is the gradient's
+         lightest point, it sits under the centred mark, and it is therefore the
+         orb's contrast knob (MOTIR-3207). Named `.hc-orb` rather than `.orb`
+         because sheet 4's `.orb` is a different, guarded rule. */
+      .hc-orb {
+        position: relative;
+        flex: none;
+        width: 40px;
+        height: 40px;
+        border-radius: 50%;
+        display: grid;
+        place-items: center;
+        color: var(--el-accent-text);
+        background-image: radial-gradient(
+          circle at 33% 27%,
+          color-mix(in srgb, var(--el-accent-text) var(--orb-lit-mix), var(--el-accent)),
+          var(--el-accent) 56%,
+          color-mix(in srgb, var(--el-accent) 68%, var(--el-highlight))
+        );
+        box-shadow: var(
+          --plan-orb-shadow,
+          inset 0 1px 0 color-mix(in srgb, var(--el-accent-text) 40%, transparent),
+          0 8px 24px -6px color-mix(in srgb, var(--el-accent) 80%, transparent),
+          0 0 28px -2px color-mix(in srgb, var(--el-highlight) 55%, transparent)
+        );
       }
-      .hc-editorial {
-        border-radius: 999px;
-        color: #fff;
-        background: linear-gradient(135deg, #6a4ef2, #5645d4 46%, #9450ef);
-        box-shadow:
-          inset 0 1px 0 #ffffff5e,
-          0 6px 18px -5px #5645d4cc,
-          0 0 22px -3px #ff64c885;
-        overflow: hidden;
+      .hc-orb .mlogo {
+        width: 19px;
+        height: 19px;
       }
-      .hc-editorial .spark {
-        filter: drop-shadow(0 0 5px #ffffffd6);
+
+      /* ══ THE SETTLED PER-STYLE RULES — verbatim from `design-notes.md`
+         § *The STYLE MATRIX* › *The CSS, verbatim*. Nothing below is authored
+         for this sheet: it is the block MOTIR-4743 pastes into `theme.css`,
+         rendered here so the drawing and the specification cannot disagree.
+         `data-ai-cta` separates the two controls because they do not share a
+         fill recipe — the orb's radial first stop is the guarded
+         `--orb-lit-mix`, and one shared `background-image` would overwrite it.
+         Radius / padding / height are NOT set here: they already flow. ══ */
+
+      /* 2 · Soft / Playful — pillowy stacked shadow, no border. */
+      @scope ([data-style='soft-playful']) to ([data-style]) {
+        [data-surface='ai-cta'] {
+          font-weight: 800;
+          box-shadow:
+            0 7px 0 -1px color-mix(in srgb, var(--el-accent) 22%, var(--el-page-bg)),
+            0 14px 22px -6px color-mix(in srgb, var(--el-accent) 55%, transparent);
+        }
       }
-      .hc-editorial::after {
-        content: '';
-        position: absolute;
-        top: -12%;
-        left: -45%;
-        width: 38%;
-        height: 130%;
-        background: linear-gradient(100deg, transparent, #ffffff9c, transparent);
-        transform: skewX(-18deg);
+
+      /* 3 · Swiss / Minimal-Flat — flat solid, sharp, uppercase, NO shadow. */
+      @scope ([data-style='swiss-minimal-flat']) to ([data-style]) {
+        [data-surface='ai-cta'] {
+          box-shadow: none;
+          font-weight: 700;
+          text-transform: uppercase;
+          letter-spacing: 0.07em;
+        }
+        [data-surface='ai-cta'][data-ai-cta='pill'] {
+          background-image: none;
+          background-color: var(--el-accent);
+        }
       }
-      /* 2 · Soft / Playful — rounded, pillowy stacked shadow */
-      .st-soft .st-stage {
-        background: linear-gradient(160deg, #f3effe, #fdeef7);
+
+      /* 4 · Glassmorphism — frosted translucency over the rim. 86% is a FLOOR. */
+      @scope ([data-style='glassmorphism']) to ([data-style]) {
+        [data-surface='ai-cta'] {
+          border: 1px solid var(--glass-rim);
+          -webkit-backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-saturate));
+          backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-saturate));
+          box-shadow:
+            inset 0 1px 0 var(--glass-rim),
+            0 8px 22px -6px color-mix(in srgb, var(--el-accent) 45%, transparent);
+        }
+        [data-surface='ai-cta'][data-ai-cta='pill'] {
+          background-image: none;
+          background-color: color-mix(in srgb, var(--el-accent) 86%, transparent);
+        }
+        [data-surface='ai-cta'][data-ai-cta='orb'] {
+          /* Crown-confined: across the whole circle this sheen lightens the
+             26/56 glyph box to 3.17:1 light / 2.67:1 dark and breaks the
+             `--orb-lit-mix` floor the style layer may not touch. */
+          background-size:
+            100% 20%,
+            100% 100%;
+          background-position:
+            top left,
+            top left;
+          background-repeat: no-repeat;
+          background-image:
+            linear-gradient(160deg, var(--glass-sheen), transparent 90%),
+            radial-gradient(
+              circle at 33% 27%,
+              color-mix(in srgb, var(--el-accent-text) var(--orb-lit-mix), var(--el-accent)),
+              var(--el-accent) 56%,
+              color-mix(in srgb, var(--el-accent) 68%, var(--el-highlight))
+            );
+        }
       }
-      .hc-soft {
-        border-radius: 17px;
-        color: #fff;
-        font-weight: 800;
-        background: linear-gradient(135deg, #6d54e6, #a05cf0);
-        box-shadow:
-          0 7px 0 -1px #d8c7ff,
-          0 14px 22px -6px #b794f6cc;
+
+      /* 5 · Neo-Brutalism — hard 2px border + zero-blur offset shadow. */
+      @scope ([data-style='neo-brutalism']) to ([data-style]) {
+        [data-surface='ai-cta'] {
+          border: 2px solid var(--el-text);
+          box-shadow: 4px 4px 0 0 var(--el-text);
+          font-weight: 800;
+          text-transform: uppercase;
+        }
+        [data-surface='ai-cta'][data-ai-cta='pill'] {
+          background-image: none;
+          background-color: var(--el-accent);
+        }
       }
-      .hc-soft .spark {
-        filter: drop-shadow(0 0 4px #fff);
+
+      /* 6 · Cybercore / Y2K — dark HUD ground, neon halo, mono label. */
+      @scope ([data-style='cybercore-y2k']) to ([data-style]) {
+        [data-surface='ai-cta'] {
+          border: 1px solid color-mix(in srgb, var(--el-highlight) 70%, transparent);
+          box-shadow:
+            0 0 10px color-mix(in srgb, var(--el-highlight) 60%, transparent),
+            0 0 26px -4px color-mix(in srgb, var(--el-accent) 70%, transparent);
+          font-family: var(--font-mono);
+          letter-spacing: 0.04em;
+        }
+        [data-surface='ai-cta'][data-ai-cta='pill'] {
+          background-image: linear-gradient(
+            135deg,
+            color-mix(in srgb, var(--el-accent) 88%, black),
+            color-mix(
+              in srgb,
+              color-mix(in srgb, var(--el-accent) 70%, var(--el-highlight)) 78%,
+              black
+            )
+          );
+        }
+        [data-surface='ai-cta'][data-ai-cta='orb'] {
+          background-image:
+            linear-gradient(
+              160deg,
+              color-mix(in srgb, var(--el-highlight) 22%, transparent),
+              transparent 55%
+            ),
+            radial-gradient(
+              circle at 33% 27%,
+              color-mix(in srgb, var(--el-accent-text) var(--orb-lit-mix), var(--el-accent)),
+              var(--el-accent) 56%,
+              color-mix(in srgb, var(--el-accent) 68%, var(--el-highlight))
+            );
+        }
       }
-      /* 3 · Swiss / Minimal-Flat — flat solid, sharp, uppercase */
-      .st-swiss .st-stage {
-        background: #ffffff;
+
+      /* 7 · Aurora — lit from within, colour halo, no hard shadow. */
+      @scope ([data-style='aurora']) to ([data-style]) {
+        [data-surface='ai-cta'] {
+          box-shadow:
+            inset 0 1px 0 color-mix(in srgb, var(--el-accent-text) var(--aurora-sheen), transparent),
+            0 0 26px -2px color-mix(in srgb, var(--el-accent) var(--aurora-glow), transparent),
+            0 0 40px -6px color-mix(in srgb, var(--el-highlight) var(--aurora-glow), transparent);
+        }
+        [data-surface='ai-cta'][data-ai-cta='pill'] {
+          background-size:
+            100% 28%,
+            100% 100%;
+          background-position:
+            top left,
+            top left;
+          background-repeat: no-repeat;
+          background-image:
+            linear-gradient(
+              180deg,
+              color-mix(in srgb, var(--el-accent-text) var(--aurora-sheen), transparent),
+              transparent 90%
+            ),
+            linear-gradient(
+              135deg,
+              var(--el-accent),
+              color-mix(in srgb, var(--el-accent) 86%, var(--el-highlight))
+            );
+        }
       }
-      .hc-swiss {
-        border-radius: 3px;
-        color: #fff;
-        background: #5645d4;
-        box-shadow: none;
-        font-size: 11px;
-        font-weight: 700;
-        text-transform: uppercase;
-        letter-spacing: 0.07em;
+
+      /* 8 · 3D / Immersive — NOTHING. `--plan-hero-shadow` / `--plan-orb-shadow`
+         own this control's depth and the components read them through a `var()`
+         seam an inline `box-shadow` would otherwise beat (MOTIR-3522). A rule
+         here would either lose to that inline declaration or take a
+         `data-depth="key"` control off the plane ladder it is declared on
+         (docs/styles/3d-immersive.md §4 / §4b). Deliberately empty — recorded so
+         the absence reads as a decision, not an omission. */
+
+      /* 9 · Hand-Drawn / Indie — a drawn ink outline + a hand-placed offset. */
+      @scope ([data-style='hand-drawn-indie']) to ([data-style]) {
+        [data-surface='ai-cta'] {
+          position: relative;
+          font-weight: 700;
+          box-shadow: 3px 4px 0 -1px color-mix(in srgb, var(--el-border-strong) 55%, transparent);
+        }
+        [data-surface='ai-cta']::after {
+          content: '';
+          position: absolute;
+          inset: -1px;
+          pointer-events: none;
+          border: 2px solid var(--el-border-strong);
+          border-radius: inherit;
+          filter: url(#hd-rough);
+        }
       }
-      /* 4 · Neo-Brutalism — hard border + offset hard shadow */
-      .st-brutal .st-stage {
-        background: #fdf7e3;
+
+      /* 10 · Neumorphism — moulded, NOT raised-and-glowing: no gradient, no
+         glow, and the hairline is KEPT (structure never relies on shadow alone). */
+      @scope ([data-style='neumorphism']) to ([data-style]) {
+        [data-surface='ai-cta'] {
+          border: 1px solid color-mix(in srgb, var(--el-accent) 70%, var(--el-text));
+          box-shadow:
+            var(--neu-distance) var(--neu-distance) var(--neu-blur) var(--neu-shadow),
+            calc(var(--neu-distance) * -1) calc(var(--neu-distance) * -1) var(--neu-blur)
+              var(--neu-light);
+        }
+        [data-surface='ai-cta'][data-ai-cta='pill'],
+        [data-surface='ai-cta'][data-ai-cta='orb'] {
+          background-image: none;
+          background-color: var(--el-accent);
+        }
       }
-      .hc-brutal {
-        border-radius: 5px;
-        color: #1a1a1a;
-        background: #b9a6ff;
-        border: 2px solid #000;
-        box-shadow: 5px 5px 0 #000;
-        font-weight: 800;
-        text-transform: uppercase;
-        font-size: 11.5px;
-      }
-      /* 5 · Glassmorphism — frosted translucent over a colourful surface */
-      .st-glass .st-stage {
-        background: linear-gradient(135deg, #6a4ef2, #c084fc 52%, #f0abfc);
-      }
-      .hc-glass {
-        border-radius: 999px;
-        color: #fff;
-        background: rgba(255, 255, 255, 0.18);
-        backdrop-filter: blur(10px);
-        -webkit-backdrop-filter: blur(10px);
-        border: 1px solid rgba(255, 255, 255, 0.6);
-        box-shadow:
-          inset 0 1px 0 rgba(255, 255, 255, 0.6),
-          0 8px 22px rgba(40, 20, 90, 0.3);
-        text-shadow: 0 1px 2px rgba(0, 0, 0, 0.28);
-      }
-      /* 6 · Cybercore / Y2K — dark surface + neon glow + mono */
-      .st-cyber .st-h {
-        background: #14111f;
-        color: #c4a6ff;
-        border-bottom-color: #2a2540;
-      }
-      .st-cyber .st-h .def {
-        background: #2a2150;
-        color: #e7b3ff;
-      }
-      .st-cyber .st-stage {
-        background:
-          linear-gradient(#181430 1px, transparent 1px) 0 0 / 18px 18px,
-          linear-gradient(90deg, #181430 1px, transparent 1px) 0 0 / 18px 18px,
-          #0b0a16;
-      }
-      .hc-cyber {
-        border-radius: 4px;
-        color: #fff;
-        font-family: ui-monospace, monospace;
-        font-size: 11.5px;
-        letter-spacing: 0.04em;
-        background: linear-gradient(135deg, #7c3aed, #db2777);
-        border: 1px solid #f0abfc;
-        box-shadow:
-          0 0 10px #d946ef,
-          0 0 26px -4px #7c3aed;
-        text-shadow: 0 0 6px #ffffffb0;
+
+      /* 11 · Retrofuturism — a chrome bevel + a CROWN-CONFINED specular streak.
+         ⚠️ THE STREAK IS THE THING THAT HAD TO MOVE, not the bevel. Across the
+         full box the diagonal at `--retro-spec` washes the label to 2.55:1 light
+         / 2.22:1 dark, and thinning it does not rescue it (18% still measures
+         3.67:1 dark, by which point the chrome has stopped reading). Sized to
+         the top band it sits above the cap height, the label sits on the bevel
+         BODY at 6.76:1 / 5.16:1, and the chrome still reads — a machined bevel
+         IS a vertical light-to-dark ramp with a highlight on the crown. */
+      @scope ([data-style='retrofuturism']) to ([data-style]) {
+        [data-surface='ai-cta'] {
+          border: 1px solid color-mix(in srgb, var(--el-accent-text) 30%, transparent);
+          box-shadow:
+            inset 0 1px 0
+              color-mix(in srgb, var(--el-accent-text) var(--retro-bevel-light), transparent),
+            0 0 24px -4px color-mix(in srgb, var(--el-accent) var(--retro-glow), transparent);
+        }
+        [data-surface='ai-cta'][data-ai-cta='pill'] {
+          background-image:
+            linear-gradient(
+              104deg,
+              transparent 30%,
+              color-mix(in srgb, var(--el-accent-text) var(--retro-spec), transparent) 46%,
+              transparent 62%
+            ),
+            linear-gradient(
+              180deg,
+              color-mix(in srgb, var(--el-accent) 82%, white) 0%,
+              var(--el-accent) 20%,
+              color-mix(in srgb, var(--el-accent) 84%, black) 100%
+            );
+          /* The specular streak is a CROWN highlight, sized to the top band alone.
+             Across the whole box it washes the label to 2.55:1 light / 2.22:1 dark —
+             and thinning it does not rescue it (18% still measures 3.67:1 in dark).
+             Confined above the cap height the label sits on the bevel BODY, and the
+             chrome still reads, because a machined bevel IS a vertical light-to-dark
+             ramp with a highlight on the crown. */
+          background-size:
+            100% 28%,
+            100% 100%;
+          background-position:
+            top left,
+            top left;
+          background-repeat: no-repeat;
+        }
+        [data-surface='ai-cta'][data-ai-cta='orb'] {
+          /* Crown-confined, for the same reason as glass: unbounded it measures
+             3.34:1 light / 2.78:1 dark inside the glyph box. */
+          background-size:
+            100% 26%,
+            100% 100%;
+          background-position:
+            top left,
+            top left;
+          background-repeat: no-repeat;
+          background-image:
+            linear-gradient(
+              180deg,
+              color-mix(in srgb, var(--el-accent-text) var(--retro-bevel-light), transparent),
+              transparent 90%
+            ),
+            radial-gradient(
+              circle at 33% 27%,
+              color-mix(in srgb, var(--el-accent-text) var(--orb-lit-mix), var(--el-accent)),
+              var(--el-accent) 56%,
+              color-mix(in srgb, var(--el-accent) 68%, var(--el-highlight))
+            );
+        }
       }
 
       /* ── workspace exit chrome (the close affordance on the shell) ── */
@@ -2843,74 +3223,240 @@
       </div>
     </section>
 
-    <!-- ════════════════ SHEET 5 — the hero control is STYLE-AWARE ═══════════════ -->
+    <!-- The rough-edge filter the Hand-Drawn / Indie style references as
+         `filter: url(#hd-rough)`. In the app it is mounted once in the root
+         layout by `<HandDrawnFilter />` (@motir/design-system); a mock is a
+         standalone document, so it carries the same def — an unresolvable
+         filter reference makes the element not render at all, which is silent.
+         Values are the shipped ones, not re-tuned here. -->
+    <svg aria-hidden="true" focusable="false" width="0" height="0" style="position: absolute">
+      <defs>
+        <filter id="hd-rough" x="-5%" y="-5%" width="110%" height="110%">
+          <feTurbulence
+            type="fractalNoise"
+            baseFrequency="0.014 0.016"
+            numOctaves="2"
+            seed="7"
+            result="noise"
+          />
+          <feDisplacementMap
+            in="SourceGraphic"
+            in2="noise"
+            scale="3.5"
+            xChannelSelector="R"
+            yChannelSelector="G"
+          />
+        </filter>
+      </defs>
+    </svg>
+
+    <!-- ════════════ SHEET 5 — the hero control is STYLE-AWARE, in ALL ELEVEN ═══════════ -->
     <section class="sheet">
       <div class="sheethead">
         <span class="n">5</span>
-        <h2>Style-aware — the “Plan with AI” control looks special in every design style</h2>
-        <span class="cap">restyles with <code>data-style</code></span>
+        <h2>
+          Style-aware &mdash; the &ldquo;Plan with AI&rdquo; pill and the M orb in every registered
+          style
+        </h2>
+        <span class="cap">11 of 11, from the settled CSS</span>
       </div>
       <div class="sheetbody">
         <p class="lead" style="margin-bottom: 16px">
-          Motir dogfoods its own swappable <b>style axis</b> (<code>data-style</code>). The hero
-          control is a <b>style-aware surface</b>: it doesn’t just inherit a token — each style
-          gives it a <b>distinct, special treatment</b> (gradient + glow, frosted glass, hard-shadow
-          brutalist, neon, flat-Swiss, soft-playful), with colour <b>palette-derived</b> so a
-          <code>data-palette</code> swap re-tints it and a <code>data-style</code> swap re-shapes
-          it. The same logic themes the floating <b>M</b> orb.
+          Motir dogfoods its own swappable <b>style axis</b> (<code>data-style</code>), and the hero
+          control is the <b>sanctioned feature-surface exception</b> &mdash; the one control allowed
+          to break the flat-button norm. Each style gives it a <b>distinct material</b>, with colour
+          <b>palette-derived</b> so a <code>data-palette</code> swap re-tints it and a
+          <code>data-style</code> swap re-shapes it.
+          <b
+            >The eleven tiles below are the eleven <code>[data-style]</code> blocks in
+            <code>packages/design-system/theme.css</code></b
+          >
+          &mdash; the set is derived from the registry, not kept in step by hand.
         </p>
         <div class="stylegrid">
-          <div class="styletile st-editorial">
+          <div class="styletile" data-style="warm-editorial">
             <div class="st-h">Warm Editorial <span class="def">default</span></div>
             <div class="st-stage">
-              <span class="hc hc-editorial"><span class="spark">✦</span> Plan with AI</span>
+              <span class="hc" data-surface="ai-cta" data-ai-cta="pill" data-depth="key"
+                ><span class="spark">&#10022;</span> Plan with AI</span
+              >
+              <span class="hc-orb" data-surface="ai-cta" data-ai-cta="orb" data-depth="key"
+                ><svg class="mlogo" viewBox="0 0 24 24" aria-hidden="true">
+                  <path d="M5 18V7l7 6 7-6v11" /></svg
+              ></span>
+            </div>
+            <div class="st-cap">
+              gradient + glow + shimmer — the Tier-0 base, and the components&rsquo; own
+              <code>var()</code> fallback
             </div>
           </div>
-          <div class="styletile st-soft">
+          <div class="styletile" data-style="soft-playful">
             <div class="st-h">Soft / Playful</div>
             <div class="st-stage">
-              <span class="hc hc-soft"><span class="spark">✦</span> Plan with AI</span>
+              <span class="hc" data-surface="ai-cta" data-ai-cta="pill" data-depth="key"
+                ><span class="spark">&#10022;</span> Plan with AI</span
+              >
+              <span class="hc-orb" data-surface="ai-cta" data-ai-cta="orb" data-depth="key"
+                ><svg class="mlogo" viewBox="0 0 24 24" aria-hidden="true">
+                  <path d="M5 18V7l7 6 7-6v11" /></svg
+              ></span>
             </div>
+            <div class="st-cap">pillowy stacked shadow; heavier label</div>
           </div>
-          <div class="styletile st-swiss">
+          <div class="styletile" data-style="swiss-minimal-flat">
             <div class="st-h">Swiss / Minimal-Flat</div>
             <div class="st-stage">
-              <span class="hc hc-swiss"><span class="spark">✦</span> Plan with AI</span>
+              <span class="hc" data-surface="ai-cta" data-ai-cta="pill" data-depth="key"
+                ><span class="spark">&#10022;</span> Plan with AI</span
+              >
+              <span class="hc-orb" data-surface="ai-cta" data-ai-cta="orb" data-depth="key"
+                ><svg class="mlogo" viewBox="0 0 24 24" aria-hidden="true">
+                  <path d="M5 18V7l7 6 7-6v11" /></svg
+              ></span>
+            </div>
+            <div class="st-cap">
+              flat solid, sharp, uppercase &mdash; and the one style that gives up the glow
             </div>
           </div>
-          <div class="styletile st-brutal">
-            <div class="st-h">Neo-Brutalism</div>
-            <div class="st-stage">
-              <span class="hc hc-brutal"><span class="spark">✦</span> Plan with AI</span>
-            </div>
-          </div>
-          <div class="styletile st-glass">
+          <div class="styletile" data-style="glassmorphism">
             <div class="st-h">Glassmorphism</div>
             <div class="st-stage">
-              <span class="hc hc-glass"><span class="spark">✦</span> Plan with AI</span>
+              <span class="hc" data-surface="ai-cta" data-ai-cta="pill" data-depth="key"
+                ><span class="spark">&#10022;</span> Plan with AI</span
+              >
+              <span class="hc-orb" data-surface="ai-cta" data-ai-cta="orb" data-depth="key"
+                ><svg class="mlogo" viewBox="0 0 24 24" aria-hidden="true">
+                  <path d="M5 18V7l7 6 7-6v11" /></svg
+              ></span>
             </div>
+            <div class="st-cap">frosted at an 86% accent FLOOR, over the rim</div>
           </div>
-          <div class="styletile st-cyber">
+          <div class="styletile" data-style="neo-brutalism">
+            <div class="st-h">Neo-Brutalism</div>
+            <div class="st-stage">
+              <span class="hc" data-surface="ai-cta" data-ai-cta="pill" data-depth="key"
+                ><span class="spark">&#10022;</span> Plan with AI</span
+              >
+              <span class="hc-orb" data-surface="ai-cta" data-ai-cta="orb" data-depth="key"
+                ><svg class="mlogo" viewBox="0 0 24 24" aria-hidden="true">
+                  <path d="M5 18V7l7 6 7-6v11" /></svg
+              ></span>
+            </div>
+            <div class="st-cap">2px ink border + a zero-blur offset shadow</div>
+          </div>
+          <div class="styletile" data-style="cybercore-y2k" data-theme="dark">
             <div class="st-h">Cybercore / Y2K</div>
             <div class="st-stage">
-              <span class="hc hc-cyber"><span class="spark">✦</span> Plan with AI</span>
+              <span class="hc" data-surface="ai-cta" data-ai-cta="pill" data-depth="key"
+                ><span class="spark">&#10022;</span> Plan with AI</span
+              >
+              <span class="hc-orb" data-surface="ai-cta" data-ai-cta="orb" data-depth="key"
+                ><svg class="mlogo" viewBox="0 0 24 24" aria-hidden="true">
+                  <path d="M5 18V7l7 6 7-6v11" /></svg
+              ></span>
+            </div>
+            <div class="st-cap">dark HUD ground, neon halo instead of a drop shadow, mono</div>
+          </div>
+          <div class="styletile" data-style="aurora">
+            <div class="st-h">Aurora</div>
+            <div class="st-stage">
+              <span class="hc" data-surface="ai-cta" data-ai-cta="pill" data-depth="key"
+                ><span class="spark">&#10022;</span> Plan with AI</span
+              >
+              <span class="hc-orb" data-surface="ai-cta" data-ai-cta="orb" data-depth="key"
+                ><svg class="mlogo" viewBox="0 0 24 24" aria-hidden="true">
+                  <path d="M5 18V7l7 6 7-6v11" /></svg
+              ></span>
+            </div>
+            <div class="st-cap">lit from within &mdash; a colour halo, no hard shadow</div>
+          </div>
+          <div class="styletile" data-style="3d-immersive">
+            <div class="st-h">3D / Immersive <span class="def">ships</span></div>
+            <div class="st-stage">
+              <span class="hc" data-surface="ai-cta" data-ai-cta="pill" data-depth="key"
+                ><span class="spark">&#10022;</span> Plan with AI</span
+              >
+              <span class="hc-orb" data-surface="ai-cta" data-ai-cta="orb" data-depth="key"
+                ><svg class="mlogo" viewBox="0 0 24 24" aria-hidden="true">
+                  <path d="M5 18V7l7 6 7-6v11" /></svg
+              ></span>
+            </div>
+            <div class="st-cap">
+              the physical key&rsquo;s base edge, already shipped &mdash; this style adds NOTHING
+              here
+            </div>
+          </div>
+          <div class="styletile" data-style="hand-drawn-indie">
+            <div class="st-h">Hand-Drawn / Indie</div>
+            <div class="st-stage">
+              <span class="hc" data-surface="ai-cta" data-ai-cta="pill" data-depth="key"
+                ><span class="spark">&#10022;</span> Plan with AI</span
+              >
+              <span class="hc-orb" data-surface="ai-cta" data-ai-cta="orb" data-depth="key"
+                ><svg class="mlogo" viewBox="0 0 24 24" aria-hidden="true">
+                  <path d="M5 18V7l7 6 7-6v11" /></svg
+              ></span>
+            </div>
+            <div class="st-cap">a drawn ink outline on the wonky badge radius</div>
+          </div>
+          <div class="styletile" data-style="neumorphism">
+            <div class="st-h">Neumorphism</div>
+            <div class="st-stage">
+              <span class="hc" data-surface="ai-cta" data-ai-cta="pill" data-depth="key"
+                ><span class="spark">&#10022;</span> Plan with AI</span
+              >
+              <span class="hc-orb" data-surface="ai-cta" data-ai-cta="orb" data-depth="key"
+                ><svg class="mlogo" viewBox="0 0 24 24" aria-hidden="true">
+                  <path d="M5 18V7l7 6 7-6v11" /></svg
+              ></span>
+            </div>
+            <div class="st-cap">moulded: no gradient, no glow, hairline KEPT</div>
+          </div>
+          <div class="styletile" data-style="retrofuturism">
+            <div class="st-h">Retrofuturism</div>
+            <div class="st-stage">
+              <span class="hc" data-surface="ai-cta" data-ai-cta="pill" data-depth="key"
+                ><span class="spark">&#10022;</span> Plan with AI</span
+              >
+              <span class="hc-orb" data-surface="ai-cta" data-ai-cta="orb" data-depth="key"
+                ><svg class="mlogo" viewBox="0 0 24 24" aria-hidden="true">
+                  <path d="M5 18V7l7 6 7-6v11" /></svg
+              ></span>
+            </div>
+            <div class="st-cap">
+              chrome bevel + specular streak, highlight bounded above the label
             </div>
           </div>
         </div>
       </div>
       <div class="note">
-        <b>How it stays token-disciplined.</b> Like the sanctioned surface-material styles
-        (glassmorphism &amp; co.), the hero control gets a per-style <b>material</b> treatment —
-        <code>[data-style='id'] [data-surface='ai-cta'] {…}</code> — whose colour is
-        <b>palette-derived</b> (<code>color-mix()</code> /
-        <code>var(--el-accent | --el-highlight)</code>, no raw hex), and whose radius / padding /
-        shadow flow through the element-semantic <b>shape</b> tokens. So the two axes stay disjoint:
-        a palette swap re-tints every style’s treatment; a style swap re-shapes it.
-        <b>AA holds in each</b> — label text sits over the accent-dominant region (and Cybercore
-        renders its native dark register).
+        <b>Drawn from the SPECIFICATION, not beside it.</b> Every tile above is painted by the
+        <code>@scope ([data-style='X']) to ([data-style])</code> rules
+        <code>design-notes.md</code> &sect; <i>The STYLE MATRIX</i> carries verbatim, over this
+        file&rsquo;s own <code>--el-*</code> layer &mdash; so the drawing and the block MOTIR-4743
+        pastes into <code>theme.css</code> cannot disagree. The six tiles this sheet used to draw
+        were private <code>.hc-*</code> classes in raw hex: they showed the LOOK and not the
+        MECHANISM, and nothing in them was copyable. <br /><br />
+        <b>Two attributes, not one.</b> The pill emits <code>data-ai-cta="pill"</code> and the orb
+        <code>data-ai-cta="orb"</code> alongside the shared <code>data-surface="ai-cta"</code>,
+        because they do not share a fill recipe: the orb&rsquo;s radial first stop is
+        <code>--orb-lit-mix</code>, a guarded contrast knob, and one shared
+        <code>background-image</code> would overwrite it.
+        <b>Radius, padding and height are not set by any rule above</b> &mdash;
+        <code>--radius-badge</code> / <code>--spacing-btn-x</code> / <code>--height-btn-md</code>
+        already reach these controls today, which is why Swiss, Brutalism and Cybercore are square
+        here and Hand-Drawn is wonky.
+        <br /><br />
+        <b>AA holds in all eleven, measured rather than claimed</b> &mdash; the label
+        (<code>--el-accent-text</code>) over its own accent-dominant region, resolved through a CSS
+        engine and read off the painted pixel. Tightest: <b>Glassmorphism 4.87:1</b> light and the
+        base group <b>4.99:1</b> dark; every row clears 4.5:1 in both themes, and the orb glyph is
+        unchanged at 3.78:1 / 3.10:1. The per-row table, and the two rows where the measurement
+        changed the design, are in <code>design-notes.md</code>. This sheet renders the
+        <b>light</b> register, as the rest of this asset does; Cybercore is drawn on its own dark
+        HUD ground because that is its native register.
       </div>
     </section>
-
     <!-- ════════════════ SHEET 6 — opening on top of the app + exiting ═══════════════ -->
     <section class="sheet">
       <div class="sheethead">

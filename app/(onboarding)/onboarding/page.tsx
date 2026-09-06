@@ -56,7 +56,7 @@ export default async function OnboardingEntrancePage() {
   // the migrate wizard. Existing items ARE the project's understanding.
   //
   // …UNLESS the migrate wizard already handed off to planning (MOTIR-1725) —
-  // this route is also `PLANNING_WORKSPACE_PATH`, the universal "Plan with AI"
+  // this route was also the universal "Plan with AI"
   // target, so an unconditional bounce here trapped the hand-off as well.
   //
   // ⚠️ AND THE ROUTER ASKS BOTH HALVES OF THE QUESTION NOW (MOTIR-4756). It read

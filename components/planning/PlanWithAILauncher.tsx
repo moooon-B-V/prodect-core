@@ -5,7 +5,8 @@ import Link from 'next/link';
 import { useTranslations } from 'next-intl';
 import { Sparkles } from 'lucide-react';
 import { cn } from '@/lib/utils/cn';
-import { planningWorkspaceHref, type PlanningLaunchContext } from '@/lib/planning/launcher';
+import { type PlanningLaunchContext } from '@/lib/planning/launcher';
+import { useOpenPlanningWorkspace } from '@/lib/hooks/useOpenPlanningWorkspace';
 
 /**
  * PlanWithAILauncher — the ONE reusable hero affordance that summons the AI
@@ -23,9 +24,12 @@ import { planningWorkspaceHref, type PlanningLaunchContext } from '@/lib/plannin
  * re-skins with `data-palette` and re-shapes with `data-style` like the rest of
  * the UI.
  *
- * `context` is the originating surface; `planningWorkspaceHref` resolves it to
- * the mode + carries it to the workspace. Rendered as a real `<Link>` so it is
- * keyboard-reachable and middle/⌘-clickable. The detail door (MOTIR-910) and the
+ * `context` is the originating surface; `useOpenPlanningWorkspace` resolves it
+ * to the mode and to the OVERLAY address on the page this pill sits on
+ * (MOTIR-4730) — a plain click opens the workspace in place with `shallowPush`,
+ * and the page underneath never unmounts. Still a real `<Link>` carrying that
+ * full address, so it is keyboard-reachable and middle/⌘-clickable: those open
+ * the same page with the workspace over it, which is the cold deep link. The detail door (MOTIR-910) and the
  * roadmap toggle (MOTIR-1011) reuse this component with their own context.
  *
  * Gating is the MOUNT's job (the launcher renders only where AI planning is
@@ -87,10 +91,12 @@ export function PlanWithAILauncher({
   const t = useTranslations('shell');
   const label = t('planWithAI.label');
   const inBar = placement === 'bar';
+  const { href, open } = useOpenPlanningWorkspace(context);
 
   return (
     <Link
-      href={planningWorkspaceHref(context)}
+      href={href}
+      onClick={open}
       aria-label={label}
       // The plane this control sits on (MOTIR-3522). A pill on the badge radius
       // is a flat chip by default — correct for the 9 filter/tag chips that
