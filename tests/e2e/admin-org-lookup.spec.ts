@@ -61,8 +61,12 @@ test('@smoke platform staff reach the org lookup and an org page; a tenant user 
   // ── The GET form puts the query in the URL, which is the whole argument for
   //    a form over a type-ahead: the result set is linkable and survives a
   //    reload. Assert the URL, not just the rows.
-  await page.getByRole('searchbox').fill(org.slug);
-  await page.getByRole('button', { name: 'Search' }).click();
+  // Scoped to the lookup's own `role="search"` form: the admin shell carries a
+  // (disabled) global search button whose accessible name also starts with
+  // "Search", and an unscoped match takes both.
+  const searchForm = page.getByRole('search');
+  await searchForm.getByRole('searchbox').fill(org.slug);
+  await searchForm.getByRole('button', { name: 'Search', exact: true }).click();
   await expect(page).toHaveURL(new RegExp(`/admin/tenants\\?q=${org.slug}`));
   const row = page.getByRole('link', { name: new RegExp(org.slug) });
   await expect(row).toBeVisible();
