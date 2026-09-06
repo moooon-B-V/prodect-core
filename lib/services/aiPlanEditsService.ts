@@ -40,10 +40,16 @@ export class InvalidTargetError extends Error {
   }
 }
 
-function buildTenant(ctx: ProjectContext, organizationId: string, isMeta: boolean) {
+function buildTenant(
+  ctx: ProjectContext,
+  organizationId: string,
+  isMeta: boolean,
+  internalBilling: boolean,
+) {
   return {
     organizationId,
     isMeta,
+    internalBilling,
     workspaceId: ctx.workspaceId,
     projectId: ctx.projectId,
     projectKey: ctx.project.identifier,
@@ -144,7 +150,7 @@ async function submitPlanEditJob(
   ctx: ProjectContext,
   opts: PlanEditSubmitOptions = {},
 ): Promise<PlanEditSubmitResult> {
-  const { organizationId, isMeta } = await resolveTenantOrg({
+  const { organizationId, isMeta, internalBilling } = await resolveTenantOrg({
     userId: ctx.userId,
     workspaceId: ctx.workspaceId,
   });
@@ -173,7 +179,7 @@ async function submitPlanEditJob(
     userId: ctx.userId,
     workspaceId: ctx.workspaceId,
   });
-  const tenant = buildTenant(ctx, organizationId, isMeta);
+  const tenant = buildTenant(ctx, organizationId, isMeta, internalBilling);
   const { jobId } = await submitJob(
     // ONE planning kind (ADR `session-model.md` §6 step 2). Every planning submit
     // in the product sends this; motir-ai reads WHAT the run is about off the
@@ -504,7 +510,7 @@ export const aiPlanEditsService = {
 
     let jobId: string;
     try {
-      const { organizationId, isMeta } = await resolveTenantOrg({
+      const { organizationId, isMeta, internalBilling } = await resolveTenantOrg({
         userId: ctx.userId,
         workspaceId: ctx.workspaceId,
       });
@@ -534,7 +540,7 @@ export const aiPlanEditsService = {
         // the only thing distinguishing it on the wire now, and its silent loss
         // would route every revision to the project arm.
         'plan',
-        buildTenant(ctx, organizationId, isMeta),
+        buildTenant(ctx, organizationId, isMeta, internalBilling),
         {
           // The PLAN is the target. `planId` is the only address a revision has —
           // its proposals have no `MOTIR-<n>` until somebody approves them, which

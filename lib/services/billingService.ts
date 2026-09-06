@@ -125,6 +125,7 @@ export const billingService = {
       organizationId: input.organizationId,
       access: { role: access.role, canManageBilling: isOrgOwnerRole(access.role) },
       isMeta: org?.isMeta ?? false,
+      internalBilling: org?.internalBilling ?? false,
       motir: { scaledTrackerSubscription, aiIncludedSeat: org?.aiIncludedSeat ?? false },
       motirAi: { tier: usage.tier, balance: usage.balance, subscription },
       ci,

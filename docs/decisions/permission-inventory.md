@@ -422,6 +422,10 @@ The R41 argument, one tier up. `lib/permissions/catalog.ts` keys all resolve aga
 
 READING the policy is ungated on purpose, and that is a decision rather than an omission: a member must be able to see the rule that governs them, so the pane renders the switch READ-ONLY for somebody who may not set it instead of refusing the whole surface.
 
+**R63.** The PLATFORM-STAFF BILLING CLASSIFICATION (Story MOTIR-4337 · MOTIR-4568) — _set or remove an organization's `internal_billing` flag._ **R54's argument at a HIGHER RUNG.** Like R54 it is governed by `requirePlatformStaff` and deliberately by no permission-catalog key: a catalog key is GRANTABLE to a customer's own API token, and no customer may ever decide what their organization is billed. What differs is the degree. R54's two writes act on ONE ACCOUNT — a password reset, a session set — and sit at `operator`; this one changes what an ORGANIZATION IS CHARGED, which is the class `docs/decisions/platform-staff-auth.md` §7's allocation table puts at **`superadmin`** for every other member (credit grants, tier assignment, per-org flags). So the row reads `superadmin`, and the action and the service each assert it: the `(admin)` layout gates the PAGES, and a Server Action is a POST to a route the layout never renders.
+
+⚠️ **It is the one platform-scoped row that also carries a REQUIRED REASON**, enforced in the audit vocabulary (`PLATFORM_AUDIT_ACTIONS`) before the transaction opens rather than in the dialog. A refused write leaves no audit row at all, and an `org.internal_billing_set` row with no reason could not answer _why is this organization not being billed?_ a year later — which is the whole point of recording it.
+
 ---
 
 ## The full table
@@ -915,6 +919,7 @@ MOTIR-2277 grows the catalog and MOTIR-2256 wires the enforcement.
 
 | File                                                     | Exported actions                                                                     | Gate today                                                         | Permission           | Decision         | Why |
 | -------------------------------------------------------- | ------------------------------------------------------------------------------------ | ------------------------------------------------------------------ | -------------------- | ---------------- | --- |
+| `app/(admin)/admin/tenants/[orgId]/actions.ts`           | setInternalBillingAction                                                             | `requirePlatformStaff('superadmin')` (×2 — action + service)       | —                    | platform-scoped  | R63 |
 | `app/(admin)/admin/users/[userId]/actions.ts`            | sendPasswordResetAction, setSuspendedAction                                          | `requirePlatformStaff('operator')` (×2 — action + service)         | —                    | platform-scoped  | R54 |
 | `app/(auth)/re-consent/_actions.ts`                      | acceptCurrentLegalDocumentsAction                                                    | session only                                                       | —                    | user-scoped      | R55 |
 | `app/(authed)/_account-deletion-actions.ts`              | cancelAccountDeletionAction, scheduleAccountDeletionAction                           | session only                                                       | —                    | user-scoped      | R31 |

@@ -114,6 +114,18 @@ export interface BillingFixtureEntry {
     credits: number;
     startedAt: string;
   }[];
+  /**
+   * The per-MODEL breakdown, as `/v1/usage` reports it (MOTIR-4575).
+   *
+   * ⚠️ WIDENED FOR THE SAME REASON `search` WAS (MOTIR-4560's note above): this
+   * block was hardcoded to `[]`, so the dashboard's By-model panel could only
+   * ever render its empty state in this lane — and Story MOTIR-4337's acceptance
+   * walk has to show that panel POPULATED for an internal-billing org, because
+   * "the whole dashboard, with real figures" is the thing being accepted. An
+   * assertion against a panel that can only be empty is a check that can only
+   * pass. Optional, so every existing spec keeps the empty breakdown it has.
+   */
+  perModel?: { model: string; inputTokens: number; outputTokens: number; credits: number }[];
   /** Org-level token spend, so the dashboard's GLOBAL empty state can be kept
    *  off while search spend is zero — the distinction AC 4 drives. */
   totalSpend?: number;
@@ -193,7 +205,7 @@ export function installBillingBoundaryMock(agent: MockAgent): void {
           totalSpend: e.totalSpend ?? 0,
           monthSpend: e.monthSpend ?? 0,
           monthlyHistory: [],
-          perModel: [],
+          perModel: e.perModel ?? [],
           recentRuns: { runs, page: 1, pageSize: 20, total: runs.length },
           // ⚠️ SPREAD, not a default. An absent `search` must stay ABSENT on the
           // wire — that is the rolling-deploy shape motir-core renders as

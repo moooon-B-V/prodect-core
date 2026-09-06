@@ -84,6 +84,18 @@ export interface BillingStatusDTO {
    *  page renders the "Internal plan" state instead of the storefront (no upgrade
    *  / checkout CTAs); the two billed lines below are not meaningful for it. */
   isMeta: boolean;
+  /** Whether the org is charged exactly like a CUSTOMER and then made whole —
+   *  every debit lands and is paired, in the same transaction, with an
+   *  offsetting credit (`Organization.internalBilling`, MOTIR-4565;
+   *  `docs/decisions/internal-billing-classification.md` §2).
+   *
+   *  ⚠️ IT CHANGES NO FIGURE ON THIS DTO, and that is the whole point. Every
+   *  line, every state and every number above and below is computed exactly as
+   *  it is for a paying org — this field says only WHICH KIND of org the reader
+   *  is looking at, so the surface can draw a chip. It is a second field beside
+   *  `isMeta` rather than a widening of it because the two mean opposite things:
+   *  that one suppresses, this one charges and credits. */
+  internalBilling: boolean;
   /** ① Motir (seats): the scaled-tracker subscription, or `null` = free/unscaled. */
   motir: {
     scaledTrackerSubscription: ScaledTrackerSubscription | null;

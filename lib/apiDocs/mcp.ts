@@ -443,6 +443,22 @@ const TOOL_SUMMARIES: Record<McpCatalogueToolName, McpToolSummary> = {
     // Regenerated from a live `tools/list` handshake, never from the source.
     descriptionFingerprint: '8742db646e68',
   },
+  create_acceptance_upload: {
+    summary:
+      'Mint a short-lived presigned PUT for a story\u2019s acceptance recording \u2014 step 1 of 2, ' +
+      'because a video is far larger than a tool argument can carry. Upload the bytes straight to ' +
+      'the store, then register the pathname.',
+    // Regenerated from a live `tools/list` handshake, never from the source.
+    descriptionFingerprint: '0c2e41f16865',
+  },
+  publish_acceptance_result: {
+    summary:
+      'Register the uploaded recording as the story\u2019s acceptance receipt \u2014 the thing a ' +
+      'reviewer watches and the gate rests on. Nothing else publishes it, and a missing publish ' +
+      'looks exactly like a successful run.',
+    // Regenerated from a live `tools/list` handshake, never from the source.
+    descriptionFingerprint: '8fd1253a91cf',
+  },
   link_pull_request: {
     summary:
       'Declare which work item a pull request delivers — call it right after opening one, once ' +

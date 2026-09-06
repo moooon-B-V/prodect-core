@@ -109,6 +109,17 @@ export interface OrgUsageDTO {
   // dashboard shows the balance as "Unlimited" instead of the numeric value (which
   // still debits for internal cost visibility and can drift negative).
   isMeta: boolean;
+  // Whether the org is charged exactly like a CUSTOMER and then made whole —
+  // every debit lands and is paired, in the same transaction, with an offsetting
+  // credit (`Organization.internalBilling`, MOTIR-4565;
+  // `docs/decisions/internal-billing-classification.md` §2).
+  //
+  // ⚠️ IT CHANGES NO FIGURE ON THIS DTO. The balance, the allotment, the
+  // per-model breakdown and the run log are computed exactly as they are for a
+  // paying org — this field says only WHICH KIND of org the reader is looking
+  // at. A second field beside `isMeta` rather than a widening of it, because the
+  // two mean opposite things.
+  internalBilling: boolean;
   // Balance + tier are ALWAYS org-level (one ledger per org).
   balance: number;
   tier: UsageTierDTO | null;

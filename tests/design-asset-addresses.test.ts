@@ -935,6 +935,18 @@ const KNOWN: { file: string; address: string; why: string }[] = [
     address: '/settings/workspace/github',
     why: "MOTIR-4680 moved the git connect surface a TIER — a repository is connected once, to the ORGANISATION — so `/settings/workspace/github` is a PERMANENT redirect to `/settings/organization/git`. Every asset here draws the rail row, the room's footer or the connect hand-off as it stood, and each is a point-in-time record of a surface that shipped: the address resolves (308) rather than 404s, and correcting a drawing to a destination it never depicted would rewrite what the panel recorded. ENUMERATED from a run of this lane, per MOTIR-4680's own acceptance criterion — never guessed.",
   },
+  // ── The ORG level of the console (Story MOTIR-4337) ──────────────────────
+  //    ⚠️ TWO FORWARD-LOOKING ROWS STOOD HERE AND ARE GONE, deleted by the card
+  //    they were waiting for. MOTIR-4566 built `/admin/tenants` and
+  //    `/admin/tenants/[orgId]`, so the routes resolve and the exemptions no
+  //    longer apply — which is exactly what `carries no KNOWN entry that has
+  //    stopped applying` would have turned red about. The row below is the
+  //    PERMANENT one, and it is the opposite kind.
+  {
+    file: 'design/platform-admin/design-notes.md',
+    address: '/admin/orgs',
+    why: 'The route this asset says must NOT exist — cited only to record the choice against it (the rail already reserves `/admin/tenants`, so a sibling `orgs` route would leave the reserved row pointing at nothing). PERMANENT, with no delete-me instruction: if `app/(admin)/admin/orgs/` ever lands, the asset is wrong rather than this row.',
+  },
 ];
 
 type Entry = { file: string; address: string; why: string };
@@ -1749,6 +1761,13 @@ const KNOWN_PATHS: { file: string; path: string; why: string }[] = [
     path: 'app/(authed)/settings/workspace/github/page.tsx',
     why: 'MOTIR-4680 moved the git connect surface to the ORGANISATION tier and DELETED this route; `/settings/workspace/github` is now a permanent redirect. The assets cite the file as the surface they were drawn against, which is what a point-in-time record is for. Enumerated from a run of this lane.',
   },
+  // ── ⚠️ FOUR ROWS FOR `docs/decisions/internal-billing-classification.md`
+  //    STOOD HERE AND ARE GONE (Story MOTIR-4337). They exempted four assets
+  //    that cite MOTIR-4563's ADR while it sat on an unmerged parent branch, and
+  //    they carried a delete-me instruction for the moment the parent landed.
+  //    The design merged first, so the assets and the ADR now sit on ONE branch
+  //    and the citations resolve — `carries no KNOWN_PATHS entry that has
+  //    stopped applying` is what said so, on the run that merged them.
 ];
 
 describe('a design asset — and the sources it mirrors — cite source paths that still exist', () => {

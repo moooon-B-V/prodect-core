@@ -206,17 +206,18 @@ export function BillingClient({ orgId, orgName, memberCount }: BillingClientProp
     );
   }
 
-  // The META org (moooon B.V.) is internal + unlimited + never billed — there is
-  // no plan to upgrade and no seat/AI checkout to start, so the storefront (and
-  // every CTA) is replaced by a single read-only "Internal plan" card.
-  if (data.isMeta) {
-    return (
-      <div className="flex flex-col gap-5">
-        {live}
-        <InternalPlanCard t={t} orgName={orgName} />
-      </div>
-    );
-  }
+  // ⚠️ AN `if (data.isMeta)` EARLY RETURN STOOD HERE AND IS DELETED (Story
+  // MOTIR-4337 · MOTIR-4572). It replaced the entire storefront — the home view,
+  // the plans, the seats, all four billed lines and the CI line — with one
+  // read-only card, on the single organization that uses the product every day.
+  // The states most worth exercising were the states it switched off.
+  //
+  // An org classified `internalBilling` is charged exactly like a customer and
+  // made whole by a paired ledger credit (MOTIR-4570), so every view below is
+  // TRUE for it: the figures are real, the balance nets to zero, and nothing
+  // here is a fiction that has to be hidden. What survives is a LABEL — a chip
+  // beside the tier, rendered from `data.internalBilling` — which says what kind
+  // of org this is and changes no number.
 
   const canManage = data.access.canManageBilling;
   const shared = {
@@ -233,6 +234,20 @@ export function BillingClient({ orgId, orgName, memberCount }: BillingClientProp
   return (
     <div className="flex flex-col gap-5" aria-busy={state === 'loading'}>
       {live}
+
+      {/* THE LABEL THAT REPLACED THE BRANCH (MOTIR-4572). A chip, above the
+          ordinary storefront rather than instead of it: it says what kind of
+          organization this is and changes no line, no state and no figure
+          below. `internalBilling` — never `isMeta`, which means something else
+          and is not what makes these screens honest. */}
+      {data.internalBilling ? (
+        <p className="flex flex-wrap items-center gap-2 rounded-(--radius-card) bg-(--el-tint-sky) p-(--spacing-card-padding) font-sans text-xs text-(--el-text-strong)">
+          <Pill className="border-transparent bg-(--el-page-bg) text-(--el-text-strong)">
+            {t('internalBilling.badge')}
+          </Pill>
+          <span>{t('internalBilling.note')}</span>
+        </p>
+      ) : null}
 
       {returnBanner ? (
         <ReturnBanner kind={returnBanner} onClose={() => setReturnBanner(null)} t={t} />
@@ -384,43 +399,11 @@ function AvatarCluster({ count }: { count: number }) {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// The META org (moooon B.V.) state — internal, unlimited, never billed. No CTAs:
-// there is no plan to change and no checkout to start.
-function InternalPlanCard({ t, orgName }: { t: T; orgName: string }) {
-  return (
-    <Card
-      header={
-        <div className="flex items-center justify-between gap-2">
-          <div className="flex items-center gap-2">
-            <span className="inline-flex h-7 w-7 items-center justify-center rounded-(--radius-control) bg-(--el-tint-lavender) text-(--el-text-strong)">
-              <Sparkles className="h-4 w-4" aria-hidden />
-            </span>
-            <div>
-              <h2 className="font-sans text-base font-semibold text-(--el-text)">
-                {t('internal.title')}
-              </h2>
-              <p className="font-sans text-xs text-(--el-text-muted)">{t('internal.tagline')}</p>
-            </div>
-          </div>
-          <Pill className="bg-(--el-tint-lavender) text-(--el-text-strong) border-transparent">
-            {t('internal.badge')}
-          </Pill>
-        </div>
-      }
-    >
-      <div className="flex flex-col gap-3">
-        <p className="font-sans text-sm text-(--el-text)">
-          {t('internal.subtitle', { org: orgName })}
-        </p>
-        <div className="flex flex-wrap items-center gap-2">
-          <Pill tone="neutral">{t('internal.motirLine')}</Pill>
-          <Pill tone="neutral">{t('internal.aiLine')}</Pill>
-        </div>
-        <p className="font-sans text-xs text-(--el-text-muted)">{t('internal.usageNote')}</p>
-      </div>
-    </Card>
-  );
-}
+// ⚠️ `InternalPlanCard` STOOD HERE AND IS DELETED (MOTIR-4572), with its five
+// `internal.*` i18n keys. It was the whole of what a meta org's billing page
+// rendered. Leaving a component nothing renders would leave the next reader to
+// work out whether it is dead or merely unreached — and its copy ("unlimited,
+// never billed") is now the opposite of what the product does.
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Panel 2 — the billing home (the two billed lines + payment)
@@ -1063,12 +1046,11 @@ function CiPausedDecision({ t, goPlans }: { t: T; goPlans: () => void }) {
 function MotirSearchLine({ data, t }: { data: BillingStatusDTO; t: T }) {
   const search = searchLineFigures({
     search: data.search,
-    isMeta: data.isMeta,
     balance: data.motirAi.balance,
   });
-  // `null` is the META org — the shipped "Internal plan" treatment renders no
-  // billed line at all, and a search figure beside three absent ones would be the
-  // only number on a page whose point is that none applies.
+  // `null` no longer has a META arm to mean (MOTIR-4572) — every org renders the
+  // ordinary billed lines. The helper keeps its nullable return for the cases
+  // that are genuinely about figures rather than about which org is looking.
   if (!search) return null;
 
   return (

@@ -1552,6 +1552,15 @@
           grid-template-columns: 1fr;
         }
       }
+      mark.superseded {
+        display: block;
+        margin-bottom: 8px;
+        padding: 8px 10px;
+        border-radius: var(--radius-control);
+        background: var(--el-tint-yellow);
+        color: var(--el-text-strong);
+        font-weight: 500;
+      }
     </style>
   </head>
   <body>
@@ -1902,6 +1911,12 @@
 
     <!-- ════════════ PANEL 3 — THE META ORG (NO LINE AT ALL) ══════════════════ -->
     <div class="panel-label">
+      <mark class="superseded"
+        >⚠️ SUPERSEDED 2026-09-05 (MOTIR-4337 / MOTIR-4572): an INTERNAL org renders every billed
+        line a paying org renders, with real figures that are offset in the ledger rather than
+        suppressed. This panel is kept as a record of shipped behaviour until that card merges. See
+        design-notes.md’s amendment.</mark
+      >
       3 · <strong>The META org (moooon B.V.) renders NO line.</strong> Unchanged from the shipped
       <code>InternalPlanCard</code> branch — the internal org is never billed, so the fourth line is
       absent exactly as ②③ are, not present-and-zeroed. Drawn so the code card is not tempted to

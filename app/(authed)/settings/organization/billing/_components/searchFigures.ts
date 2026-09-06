@@ -79,12 +79,15 @@ export interface SearchLineFigures {
  */
 export function searchLineFigures(input: {
   search: SearchSpendDTO | null;
-  isMeta: boolean;
   /** The org's Motir AI credit balance, for the §5 overdraft case. `null` when
    *  the balance itself could not be read — which is NOT overdraft. */
   balance: number | null;
 }): SearchLineFigures | null {
-  if (input.isMeta) return null;
+  // ⚠️ THE `isMeta` ARM IS GONE (Story MOTIR-4337 · MOTIR-4572), and with it the
+  // whole "Internal plan" treatment that replaced the storefront. It returned
+  // `null` because the meta org rendered no billed line at all; every org now
+  // renders the ordinary lines, and hiding this one would leave three billed
+  // lines beside an absent fourth for no reason a reader could recover.
 
   // ⚠️ `null` is UNAVAILABLE and is checked FIRST, so it can never fall through
   // into the zero branch below. The two are one `if` apart in the source and

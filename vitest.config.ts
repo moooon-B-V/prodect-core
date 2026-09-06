@@ -1901,6 +1901,40 @@ export default defineConfig({
         // GATED at the 90 floor rather than at the measured 100, so a later
         // refactor has room without anyone loosening a gate to make a build pass.
         'lib/ai/containerAiAddress.ts',
+        // ── Story MOTIR-4337 (an INTERNAL org bills like a customer) · the
+        //    story's Vitest gate, MOTIR-4573. Every file below was MEASURED on
+        //    this branch before being pinned, with:
+        //
+        //      pnpm vitest run --coverage tests/internalBillingStoryGate.test.tsx \
+        //        tests/platform/ tests/ai/tenantOrg.test.ts \
+        //        tests/components/classification-bar.test.tsx \
+        //        tests/components/searchFigures.test.ts \
+        //        tests/components/org-usage-search-spend.test.tsx \
+        //        tests/components/org-usage-internal-billing.test.tsx
+        //
+        //    Statements 99.31 · Branches 96.10 · Functions 100 · Lines 100
+        //    across the ten, with every file at 100 on all four axes except
+        //    `ClassificationBar.tsx` (95.83 / 85.71 / 100 / 100) and
+        //    `searchUsage.ts` (100 / 93.75 / 100 / 100).
+        //
+        // ⚠️ THE STORY'S TWO `page.tsx` FILES ARE NOT HERE, and that is the same
+        //    stated gap the MOTIR-3449 note above records rather than a new one:
+        //    `admin/tenants/page.tsx` and `admin/tenants/[orgId]/page.tsx` are
+        //    async Server Components, and covering one means awaiting it through
+        //    `serverPageHarness`. They are asserted structurally by the gate's
+        //    own guards and end to end by `tests/e2e/admin-org-lookup.spec.ts`.
+        //    They stay out until somebody measures them, which is this list's
+        //    own rule.
+        'lib/repositories/platformOrganizationRepository.ts',
+        'lib/services/platformBillingClassificationService.ts',
+        'lib/mappers/platformMappers.ts',
+        'lib/platform/auditActions.ts',
+        'lib/platform/errors.ts',
+        'lib/ai/tenantOrg.ts',
+        'app/**/admin/tenants/[orgId]/actions.ts',
+        'app/**/admin/tenants/[orgId]/_components/ClassificationBar.tsx',
+        'app/**/organization/usage/_components/searchUsage.ts',
+        'app/**/organization/billing/_components/searchFigures.ts',
       ],
       reporter: ['text', 'text-summary'],
       // Per-file thresholds keyed by glob: each of the six modules gates
@@ -3670,6 +3704,86 @@ export default defineConfig({
         // floor rather than at the measured 100, so a later refactor has room
         // without anyone loosening a gate to make a build pass.
         'lib/ai/containerAiAddress.ts': {
+          lines: 90,
+          functions: 90,
+          branches: 90,
+          statements: 90,
+        },
+        // ── Story MOTIR-4337 · MOTIR-4573. Measured first (see `include`), then
+        //    pinned at the 90 floor rather than at the measured number, so a
+        //    later refactor has room without anyone loosening a gate.
+        'lib/repositories/platformOrganizationRepository.ts': {
+          lines: 90,
+          functions: 90,
+          branches: 90,
+          statements: 90,
+        },
+        'lib/services/platformBillingClassificationService.ts': {
+          lines: 90,
+          functions: 90,
+          branches: 90,
+          statements: 90,
+        },
+        'lib/mappers/platformMappers.ts': {
+          lines: 90,
+          functions: 90,
+          branches: 90,
+          statements: 90,
+        },
+        'lib/platform/auditActions.ts': {
+          lines: 90,
+          functions: 90,
+          branches: 90,
+          statements: 90,
+        },
+        'lib/platform/errors.ts': {
+          lines: 90,
+          functions: 90,
+          branches: 90,
+          statements: 90,
+        },
+        'lib/ai/tenantOrg.ts': {
+          lines: 90,
+          functions: 90,
+          branches: 90,
+          statements: 90,
+        },
+        'app/**/admin/tenants/[orgId]/actions.ts': {
+          lines: 90,
+          functions: 90,
+          branches: 90,
+          statements: 90,
+        },
+        // ⚠️ THIS ONE'S BRANCH FLOOR IS 85, NOT 90, and the reason is stated
+        // rather than rounded away — the same shape as
+        // `publicFollowDigestService` above. Its two uncovered arms are
+        // DEFENSIVE and unreachable through the component's own surface:
+        //
+        //   · `submit()`'s `if (!trimmed) return` — the primary is `disabled`
+        //     until a non-blank reason is typed, so a blank one cannot reach the
+        //     handler. It is the belt to that button's braces, and the file's
+        //     own header says why a client-side check is never the enforcement.
+        //   · `onOpenChange`'s `next === true` arm — `open` is driven by this
+        //     component's own Button, not by a `Dialog.Trigger`, so Radix never
+        //     asks it to OPEN.
+        //
+        // The alternative was deleting the arms to buy the number, which trades
+        // real safety for a metric. 85 is a RATCHET just under the measured
+        // 85.71: it still fails on a regression, and it lowers nothing on the
+        // three axes that hold at 95.83 / 100 / 100.
+        'app/**/admin/tenants/[orgId]/_components/ClassificationBar.tsx': {
+          lines: 90,
+          functions: 90,
+          branches: 85,
+          statements: 90,
+        },
+        'app/**/organization/usage/_components/searchUsage.ts': {
+          lines: 90,
+          functions: 90,
+          branches: 90,
+          statements: 90,
+        },
+        'app/**/organization/billing/_components/searchFigures.ts': {
           lines: 90,
           functions: 90,
           branches: 90,

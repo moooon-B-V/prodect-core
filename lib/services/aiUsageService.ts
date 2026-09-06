@@ -63,6 +63,7 @@ async function projectsOfWorkspaces(
 function emptyDto(args: {
   isAdmin: boolean;
   isMeta: boolean;
+  internalBilling: boolean;
   org: { id: string; name: string };
   scope: UsageScope;
   drill: { workspaces: UsageScopeOption[]; projects: UsageScopeOption[] };
@@ -77,6 +78,7 @@ function emptyDto(args: {
     activeProject: null,
     drill: args.drill,
     isMeta: args.isMeta,
+    internalBilling: args.internalBilling,
     balance: 0,
     tier: null,
     totalSpend: 0,
@@ -135,6 +137,7 @@ export const aiUsageService = {
         return {
           orgName: org?.name ?? '',
           isMeta: org?.isMeta ?? false,
+          internalBilling: org?.internalBilling ?? false,
           orgWorkspaces: workspaces.map((w) => ({ id: w.id, name: w.name }) as UsageScopeOption),
           accessibleWorkspaceIds,
         };
@@ -208,6 +211,7 @@ export const aiUsageService = {
       return emptyDto({
         isAdmin: access.isOrgAdmin,
         isMeta: struct.isMeta,
+        internalBilling: struct.internalBilling,
         org,
         scope,
         drill: { workspaces: drillWorkspaces, projects: drillProjects },
@@ -259,6 +263,7 @@ export const aiUsageService = {
       activeProject,
       drill: { workspaces: drillWorkspaces, projects: drillProjects },
       isMeta: struct.isMeta,
+      internalBilling: struct.internalBilling,
       balance: raw.balance,
       tier: raw.tier,
       totalSpend: raw.totalSpend,

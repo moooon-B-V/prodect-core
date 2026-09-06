@@ -699,24 +699,24 @@ CI"**, on the billing settings panel, in all the states it can hold.
 
 ## Where each behaviour came from (nothing here is invented)
 
-| Behaviour drawn                                                            | Decided by                                                                        |
-| -------------------------------------------------------------------------- | --------------------------------------------------------------------------------- |
-| A **third line**, not a second usage kind on the AI line, not a breakdown  | `docs/decisions/ci-minutes-allowance.md` **§7.1** (MOTIR-1898)                    |
-| The pool `max(members × 300, 1000)` and the "300 min × 6 seats" derivation | **§1**, **§1.2** (the floor), **§7.3.2**                                          |
-| "1 credit per minute" and the credits-drawn figure                         | **§2**, **§7.3.4**                                                                |
-| "Resets 1 Aug" + it deliberately differs from the seat renewal             | **§4.5** (calendar month, UTC) — the panel must say so, not let the user assume   |
-| An org with **no seat subscription still gets a full pool**                | **§4.3**                                                                          |
-| META org → no CI line; self-host → the page 404s                           | **§4.4**, **§8.5**, **§7.3.7**                                                    |
-| `drawing_on_credits` is **visible**, not silent, and blocks nothing        | **§6.1**, **§6.5**                                                                |
-| Zero consumption is **not an empty state**                                 | **§7.3.6**                                                                        |
-| The exhausted state is **"CI is paused"**, not "dispatch paused"           | Amendment 2026-07-30 (MOTIR-1906) **§A**, **§6.5** — Actions are paused too       |
-| **Two options for an admin, an alert for a member**                        | Amendment **§D** (Yue's directive, 2026-07-30)                                    |
-| "resumes within a minute, at most 15" in the Add-credits copy              | Amendment **§B** (the resume latency, which §D requires the copy to state)        |
-| The takeover's real costs; never gated on a stored GitHub identity         | Amendment **§D** (motir-core's only social provider is Google — no admin has one) |
-| The member alert routes to "an organization owner" **without naming**      | Amendment **§D** (naming leaks org membership; mirrors `en.json` `askOwner`)      |
-| **One decision surface, N pointers**                                       | Amendment **§D**                                                                  |
-| A `connect-existing` repo is never paused                                  | Amendment **§C**                                                                  |
-| Every FIGURE on the line                                                   | `lib/dto/ciAllowance.ts` — `CiEntitlementStateDTO` (MOTIR-1901)                   |
+| Behaviour drawn                                                                                                                                                                      | Decided by                                                                        |
+| ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | --------------------------------------------------------------------------------- |
+| A **third line**, not a second usage kind on the AI line, not a breakdown                                                                                                            | `docs/decisions/ci-minutes-allowance.md` **§7.1** (MOTIR-1898)                    |
+| The pool `max(members × 300, 1000)` and the "300 min × 6 seats" derivation                                                                                                           | **§1**, **§1.2** (the floor), **§7.3.2**                                          |
+| "1 credit per minute" and the credits-drawn figure                                                                                                                                   | **§2**, **§7.3.4**                                                                |
+| "Resets 1 Aug" + it deliberately differs from the seat renewal                                                                                                                       | **§4.5** (calendar month, UTC) — the panel must say so, not let the user assume   |
+| An org with **no seat subscription still gets a full pool**                                                                                                                          | **§4.3**                                                                          |
+| ~~META org → no CI line~~ → **SUPERSEDED by MOTIR-4337**: the CI line RENDERS, in whatever state `ciAllowanceService` returns (`bypassed` for a meta org); self-host → the page 404s | **§4.4**, **§8.5**, **§7.3.7** + the amendment at the end of this file            |
+| `drawing_on_credits` is **visible**, not silent, and blocks nothing                                                                                                                  | **§6.1**, **§6.5**                                                                |
+| Zero consumption is **not an empty state**                                                                                                                                           | **§7.3.6**                                                                        |
+| The exhausted state is **"CI is paused"**, not "dispatch paused"                                                                                                                     | Amendment 2026-07-30 (MOTIR-1906) **§A**, **§6.5** — Actions are paused too       |
+| **Two options for an admin, an alert for a member**                                                                                                                                  | Amendment **§D** (Yue's directive, 2026-07-30)                                    |
+| "resumes within a minute, at most 15" in the Add-credits copy                                                                                                                        | Amendment **§B** (the resume latency, which §D requires the copy to state)        |
+| The takeover's real costs; never gated on a stored GitHub identity                                                                                                                   | Amendment **§D** (motir-core's only social provider is Google — no admin has one) |
+| The member alert routes to "an organization owner" **without naming**                                                                                                                | Amendment **§D** (naming leaks org membership; mirrors `en.json` `askOwner`)      |
+| **One decision surface, N pointers**                                                                                                                                                 | Amendment **§D**                                                                  |
+| A `connect-existing` repo is never paused                                                                                                                                            | Amendment **§C**                                                                  |
+| Every FIGURE on the line                                                                                                                                                             | `lib/dto/ciAllowance.ts` — `CiEntitlementStateDTO` (MOTIR-1901)                   |
 
 **Every number is traceable to a read.** `poolMinutes` · `consumedMinutes` ·
 `remainingMinutes` · `overageMinutes` · `chargedCredits` · `memberCount` ·
@@ -923,16 +923,16 @@ covering more than it does:
 
 ## Where each behaviour came from (nothing here is invented)
 
-| Drawn                                 | Comes from                                                                                                   |
-| ------------------------------------- | ------------------------------------------------------------------------------------------------------------ |
-| A fourth billed line at all           | `motir-gateway/docs/decisions/motir-search-channel.md` §4.4 · `motir-ai/docs/credit-model.md` §4b            |
-| Credits as the only unit              | §4.2 — the gateway prices a search and hands over whole credits; motir-core never learns what one costs      |
-| **NO meter**                          | §4.2 again, read for what it does NOT give: no pool, no allowance, no included quantity ⇒ **no denominator** |
-| **NO paused / refused state**         | §5 — an out-of-credit org goes into overdraft and search refuses nothing                                     |
-| `Spent this month` / `Spent all time` | `BillingStatusDTO.search` = `{ totalSpend, monthSpend }` (MOTIR-4555)                                        |
-| The UNAVAILABLE dash                  | `BillingStatusDTO.search` is `SearchSpendDTO \| null`; `null` = the boundary did not report the block        |
-| The META org rendering no line        | the shipped `InternalPlanCard` branch, unchanged                                                             |
-| The access path                       | `billing.mock.html` panel 1, reproduced verbatim — no new door                                               |
+| Drawn                                 | Comes from                                                                                                                                                            |
+| ------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| A fourth billed line at all           | `motir-gateway/docs/decisions/motir-search-channel.md` §4.4 · `motir-ai/docs/credit-model.md` §4b                                                                     |
+| Credits as the only unit              | §4.2 — the gateway prices a search and hands over whole credits; motir-core never learns what one costs                                                               |
+| **NO meter**                          | §4.2 again, read for what it does NOT give: no pool, no allowance, no included quantity ⇒ **no denominator**                                                          |
+| **NO paused / refused state**         | §5 — an out-of-credit org goes into overdraft and search refuses nothing                                                                                              |
+| `Spent this month` / `Spent all time` | `BillingStatusDTO.search` = `{ totalSpend, monthSpend }` (MOTIR-4555)                                                                                                 |
+| The UNAVAILABLE dash                  | `BillingStatusDTO.search` is `SearchSpendDTO \| null`; `null` = the boundary did not report the block                                                                 |
+| ~~The META org rendering no line~~    | **SUPERSEDED by MOTIR-4337** — MOTIR-4572 deletes the `isMeta` branch; an internal org renders the ordinary customer lines. See the amendment at the end of this file |
+| The access path                       | `billing.mock.html` panel 1, reproduced verbatim — no new door                                                                                                        |
 
 ## ⚠️ The two things this line does NOT have, and why each is a DECISION
 
@@ -1076,3 +1076,37 @@ Its neighbours for the record, neither of them amended: **MOTIR-4554** draws the
 same spend on the usage dashboard (the run-level drill-down this line links to and
 does not own), and **MOTIR-4555** carries the figures across the boundary that
 feed both.
+
+---
+
+# AMENDMENT 2026-09-05 — an INTERNAL org renders exactly what a paying org renders
+
+**Story MOTIR-4337 · swept by card MOTIR-4564.** This area's assets describe a META org as a
+tenant that sees an "Internal plan" card and **no CI line**. After MOTIR-4337 that description is
+not merely stale — it is the opposite of what the product does, and a design note nobody corrects
+is the specification the next agent builds to.
+
+**What changes, and what does not.**
+
+- **`isMeta` keeps its shipped meaning** — Motir's own COGS: caps lifted, AI paywall off, excluded
+  from revenue. It gains no new one
+  (`docs/decisions/internal-billing-classification.md` §1).
+- **A new, separate `Organization.internalBilling` flag** means _charged exactly like a customer,
+  then made whole_: every debit lands and is paired, in the SAME transaction, with an
+  `internal_offset` credit, so the balance nets to zero **while both entries stay visible** (§2–§3).
+- **So every billed line, its states and its figures render for an internal org exactly as for a
+  paying org** — including low-balance and out-of-credits, which are precisely the states the
+  suppression made unreachable from the seat most likely to notice a bug in them. The `isMeta`
+  branch in `BillingClient.tsx` is **deleted**, not duplicated for the new flag (MOTIR-4572).
+- **The CI line RENDERS rather than being hidden**, in whatever state `ciAllowanceService`
+  returns. For a meta org that state is `bypassed`, and showing it is the point: the bypass itself
+  stays keyed on `isMeta` (`ci-minutes-allowance.md` §4.4 — _"moooon B.V. pays its own GitHub bill
+  directly; metering it would bill the house to itself"_), and charging a CI minute Motir never
+  paid for and then offsetting it would put an invented figure on the very screen this story
+  exists to make honest.
+
+**The drawn META panels in this area are a record of superseded behaviour.**
+`ci-line.mock.html` panel 5 and `search-line.mock.html` panel 3 draw the meta variant as it ships
+today; each is annotated in place. They are **not redrawn here** — MOTIR-4572 owns the change to
+the customer surfaces, and this sweep owns the note that stops them being read as the internal
+org's future experience.
