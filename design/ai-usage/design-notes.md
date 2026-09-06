@@ -578,3 +578,28 @@ Its neighbours for the record, neither amended: **MOTIR-4551** draws the same
 spend as a billed line on the billing panel (what am I charged for — this asset
 answers where did it go), and **MOTIR-4555** carries the figures across the
 boundary that feed both.
+
+---
+
+# AMENDMENT 2026-09-05 — an INTERNAL org renders exactly what a paying org renders
+
+**Story MOTIR-4337 · swept by card MOTIR-4564.** `search-spend.mock.html` panel (d) draws "the
+META org", whose "shipped `isMeta` treatment is unchanged: the balance reads Unlimited". After
+MOTIR-4337 that is superseded, and the same correction applies to every meta-only variant this
+area describes.
+
+- **`isMeta` keeps its shipped meaning** and gains no new one; a separate
+  `Organization.internalBilling` flag means _charged exactly like a customer, then made whole_
+  (`docs/decisions/internal-billing-classification.md` §1).
+- **The balance, the allotment line, the drill-down, the per-model breakdown, the run log and the
+  remainder all render with REAL figures for an internal org** — the debits are real and each is
+  offset in the same transaction, so the balance nets to zero with both sides visible (§2–§3).
+- **Panels 7a low-balance and 7b out-of-credits RENDER**, and the org is never actually blocked
+  from working: the pairing means the balance never moves, so no refusal valve is ever reached.
+  That is a property of the write, not a second bypass (§2).
+- The five `isMeta` branches in `OrgUsageClient.tsx` are **deleted**, not duplicated for the new
+  flag — MOTIR-4572 owns that change, and MOTIR-4575's acceptance video is literally an org admin
+  watching these states.
+
+Panel (d) is **annotated in place** rather than redrawn: it remains a true record of shipped
+behaviour until MOTIR-4572 merges, and redrawing customer pixels is outside MOTIR-4564's scope.
