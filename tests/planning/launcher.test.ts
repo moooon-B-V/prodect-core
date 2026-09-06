@@ -1,5 +1,12 @@
 import { describe, it, expect } from 'vitest';
+import { readFileSync } from 'node:fs';
+import { join } from 'node:path';
 import {
+  OVERLAY_PARAM_NAMES,
+  planningOverlaySearch,
+  withPlanningOverlay,
+  withoutPlanningOverlay,
+  parsePlanningOverlay,
   resolvePlanningMode,
   planningWorkspaceHref,
   parsePlanningLaunch,
@@ -228,5 +235,213 @@ describe('planningLaunchBackHref — Close returns to the originating surface', 
 
   it('falls back to the roadmap when a work-item launch lost its key', () => {
     expect(planningLaunchBackHref(parsePlanningLaunch({ from: 'work-item' }))).toBe('/roadmap');
+  });
+});
+
+// ── THE OVERLAY ADDRESS (MOTIR-4728, under story MOTIR-4725) ────────────────
+//
+// The workspace stops being a destination and becomes a layer on the page you
+// are already on, so the launcher gains three write/strip operations and one
+// read. What these tests are FOR, beyond the obvious round trips: the merge must
+// leave the host page's own query byte-identical, because the page underneath is
+// never unmounted and its filter, its drilled level and its quick view are
+// exactly what "closing puts you back where you were" means.
+
+describe('the overlay address — the parameter NAMES are the design contract', () => {
+  // ⚠️ These four literals are copied from `design/ai-chat/design-notes.md`
+  // § *The ADDRESS — a NAMESPACED query, settled here because three cards read
+  // it*. They are duplicated here ON PURPOSE: this is the assertion that fails
+  // when either home is renamed without the other, which is the whole reason the
+  // design records them rather than whichever file was written first.
+  const DESIGN_NAMES = ['plan', 'planFrom', 'planItem', 'planRepo'];
+
+  it('emits exactly the names the design records, and no others', () => {
+    expect(Object.values(OVERLAY_PARAM_NAMES).sort()).toEqual([...DESIGN_NAMES].sort());
+  });
+
+  it('writes the mode on the presence key and the origin beside it', () => {
+    const params = planningOverlaySearch({ kind: 'project', hasPlan: true });
+    expect(params.get('plan')).toBe('replan');
+    expect(params.get('planFrom')).toBe('project');
+    expect([...params.keys()]).toEqual(['plan', 'planFrom']);
+  });
+
+  it('avoids every measured collision — none of the names is one a host route owns', () => {
+    // `?item=` is /roadmap's drilled level (MOTIR-3836), `?peek=` the quick view,
+    // `?run=` the run modal, and `?mode=` / `?from=` are the launcher's own
+    // route-era names, which the /planning forward still has to read.
+    for (const taken of ['item', 'peek', 'run', 'mode', 'from', 'repo', 'scope', 'filter']) {
+      expect(Object.values(OVERLAY_PARAM_NAMES)).not.toContain(taken);
+    }
+  });
+});
+
+describe('withPlanningOverlay / withoutPlanningOverlay', () => {
+  it("keeps the roadmap's drilled level across the whole round trip", () => {
+    const opened = withPlanningOverlay('/roadmap?item=MOTIR-12', { kind: 'project' });
+    expect(opened).toContain('item=MOTIR-12');
+    expect(opened).toContain('plan=project');
+    expect(withoutPlanningOverlay(opened)).toBe('/roadmap?item=MOTIR-12');
+  });
+
+  it('keeps the quick view across the whole round trip', () => {
+    const opened = withPlanningOverlay('/items?peek=MOTIR-12', {
+      kind: 'work-item',
+      itemKey: 'MOTIR-12',
+    });
+    expect(opened).toContain('peek=MOTIR-12');
+    expect(opened).toContain('planItem=MOTIR-12');
+    expect(withoutPlanningOverlay(opened)).toBe('/items?peek=MOTIR-12');
+  });
+
+  it('leaves NO dangling `?` on a bare route', () => {
+    const opened = withPlanningOverlay('/backlog', { kind: 'project' });
+    expect(opened.startsWith('/backlog?plan=')).toBe(true);
+    expect(withoutPlanningOverlay(opened)).toBe('/backlog');
+    // …and stripping an href that never had the overlay is a no-op.
+    expect(withoutPlanningOverlay('/backlog')).toBe('/backlog');
+  });
+
+  it('preserves a multi-parameter host query, order and encoding included', () => {
+    const href = '/backlog?filter=type%3Acode&sort=rank&page=3';
+    const opened = withPlanningOverlay(href, { kind: 'roadmap' });
+    expect(withoutPlanningOverlay(opened)).toBe(href);
+  });
+
+  it('preserves a hash fragment on both halves', () => {
+    const opened = withPlanningOverlay('/items?peek=MOTIR-9#comments', { kind: 'project' });
+    expect(opened.endsWith('#comments')).toBe(true);
+    expect(withoutPlanningOverlay(opened)).toBe('/items?peek=MOTIR-9#comments');
+  });
+
+  it('REPLACES an open overlay rather than appending a second set', () => {
+    const first = withPlanningOverlay('/items?peek=MOTIR-1', {
+      kind: 'work-item',
+      itemKey: 'MOTIR-1',
+    });
+    const second = withPlanningOverlay(first, { kind: 'work-item', itemKey: 'MOTIR-2' });
+    const params = new URLSearchParams(second.split('?')[1]);
+    expect(params.getAll('plan')).toHaveLength(1);
+    expect(params.getAll('planItem')).toEqual(['MOTIR-2']);
+    expect(withoutPlanningOverlay(second)).toBe('/items?peek=MOTIR-1');
+  });
+
+  it('DROPS the stale payload when the new launch is a different origin', () => {
+    // Re-targeting from a work-item launch to the project conversation must not
+    // leave `planItem` behind — the parse would ignore it, but an address that
+    // says one thing and means another is what the next reader debugs.
+    const itemLaunch = withPlanningOverlay('/backlog', {
+      kind: 'work-item',
+      itemKey: 'MOTIR-1',
+    });
+    const projectLaunch = withPlanningOverlay(itemLaunch, { kind: 'project' });
+    expect(projectLaunch).not.toContain('planItem');
+  });
+});
+
+describe('parsePlanningOverlay', () => {
+  it('returns NULL when the overlay is not in the address — the mount predicate', () => {
+    expect(parsePlanningOverlay(new URLSearchParams(''))).toBeNull();
+    expect(parsePlanningOverlay(new URLSearchParams('item=MOTIR-12&peek=MOTIR-3'))).toBeNull();
+    expect(parsePlanningOverlay({ item: 'MOTIR-12' })).toBeNull();
+    // The route era's own names do NOT open the overlay — that address is the
+    // forward's problem (MOTIR-4732), not the shell's.
+    expect(parsePlanningOverlay(new URLSearchParams('mode=project&from=project'))).toBeNull();
+  });
+
+  it('round-trips every launch-context variant', () => {
+    const contexts: PlanningLaunchContext[] = [
+      { kind: 'project' },
+      { kind: 'project', hasPlan: true },
+      { kind: 'project', hasPlan: false },
+      { kind: 'roadmap' },
+      { kind: 'work-item', itemKey: 'MOTIR-42' },
+      { kind: 'work-item', itemKey: 'MOTIR-42', hasPlan: true },
+      { kind: 'convention-refine', repoKey: 'motir-core' },
+    ];
+    for (const context of contexts) {
+      const launch = parsePlanningOverlay(planningOverlaySearch(context));
+      expect(launch).not.toBeNull();
+      expect(launch!.mode).toBe(resolvePlanningMode(context));
+      expect(launch!.from).toBe(context.kind);
+      expect(launch!.itemKey).toBe(context.kind === 'work-item' ? context.itemKey : null);
+      expect(launch!.repoKey).toBe(context.kind === 'convention-refine' ? context.repoKey : null);
+    }
+  });
+
+  it('reads a Server Component `searchParams` record as well as URLSearchParams', () => {
+    const record = { plan: 'contextual', planFrom: 'work-item', planItem: 'MOTIR-7' };
+    expect(parsePlanningOverlay(record)).toEqual({
+      mode: 'contextual',
+      from: 'work-item',
+      itemKey: 'MOTIR-7',
+      repoKey: null,
+    });
+    // Next hands a repeated key through as an array — take the first, as the
+    // route-era parser does.
+    expect(parsePlanningOverlay({ plan: ['replan', 'project'], planFrom: 'roadmap' })?.mode).toBe(
+      'replan',
+    );
+  });
+
+  it('does NOT let a hand-edited address smuggle a target', () => {
+    const smuggled = parsePlanningOverlay(
+      new URLSearchParams('plan=roadmap&planFrom=roadmap&planItem=MOTIR-1&planRepo=motir-core'),
+    );
+    expect(smuggled).toEqual({ mode: 'roadmap', from: 'roadmap', itemKey: null, repoKey: null });
+  });
+
+  it('degrades an unknown mode and an unknown origin to the project defaults', () => {
+    expect(parsePlanningOverlay(new URLSearchParams('plan=nonsense&planFrom=nowhere'))).toEqual({
+      mode: DEFAULT_PLANNING_MODE,
+      from: 'project',
+      itemKey: null,
+      repoKey: null,
+    });
+    // A present-but-blank `plan` is an ABSENT overlay, not a defaulted one: a
+    // stripped address can leave `?plan=` behind, and opening the workspace on
+    // it would be an overlay nobody asked for.
+    expect(parsePlanningOverlay(new URLSearchParams('plan='))).toBeNull();
+    expect(parsePlanningOverlay(new URLSearchParams('plan=%20%20'))).toBeNull();
+  });
+});
+
+describe('the ROUTE-era exports are unchanged and deprecated, not removed', () => {
+  it('still behaves exactly as before, so the five importers keep compiling', () => {
+    expect(PLANNING_WORKSPACE_PATH).toBe('/planning');
+    expect(planningWorkspaceHref({ kind: 'project' })).toBe('/planning?mode=project&from=project');
+    expect(
+      planningLaunchBackHref({
+        mode: 'contextual',
+        from: 'work-item',
+        itemKey: 'MOTIR-9',
+        repoKey: null,
+      }),
+    ).toBe('/items/MOTIR-9');
+  });
+
+  it('carries a @deprecated marker naming the card that deletes them', () => {
+    const source = readFileSync(join(process.cwd(), 'lib/planning/launcher.ts'), 'utf8');
+    for (const name of [
+      'PLANNING_WORKSPACE_PATH',
+      'planningWorkspaceHref',
+      'planningLaunchBackHref',
+    ]) {
+      const at = source.indexOf(
+        `export ${name.startsWith('planning') ? 'function' : 'const'} ${name}`,
+      );
+      expect(at).toBeGreaterThan(-1);
+      // The doc comment immediately above it carries both the marker and the key.
+      const preamble = source.slice(Math.max(0, at - 700), at);
+      expect(preamble).toContain('@deprecated');
+      expect(preamble).toContain('MOTIR-4732');
+    }
+  });
+
+  it('stays framework-free — no React and no `server-only` reaches this module', () => {
+    const source = readFileSync(join(process.cwd(), 'lib/planning/launcher.ts'), 'utf8');
+    expect(source).not.toMatch(/from 'react'/);
+    expect(source).not.toMatch(/from 'server-only'/);
+    expect(source).not.toMatch(/'use client'/);
   });
 });

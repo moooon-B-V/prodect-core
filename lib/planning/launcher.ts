@@ -61,6 +61,11 @@ export type PlanningLaunchContext =
  * forwarded from the host to `/onboarding`, so first-run and migrate projects
  * keep their journey (the host is an ADDITIONAL surface, not a bypass).
  */
+/** @deprecated The ROUTE era's entry path. The workspace is an OVERLAY on the
+ *  page you are already on (MOTIR-4725), so there is no path to go to — see
+ *  {@link withPlanningOverlay}. Kept exported and behaviourally unchanged for
+ *  the five importers still on the old shape; MOTIR-4732 deletes it with the
+ *  `(planning)` route group. */
 export const PLANNING_WORKSPACE_PATH = '/planning';
 
 /** Resolve the originating context to the planning mode the workspace opens in. */
@@ -87,6 +92,8 @@ export function resolvePlanningMode(context: PlanningLaunchContext): PlanningMod
  * carrying the originating context as query params so the workspace can seed
  * itself.
  */
+/** @deprecated Returns a DESTINATION. The overlay has none: it opens on the
+ *  page you are on. Use {@link withPlanningOverlay}. Deleted by MOTIR-4732. */
 export function planningWorkspaceHref(context: PlanningLaunchContext): string {
   const params = new URLSearchParams({
     mode: resolvePlanningMode(context),
@@ -180,10 +187,183 @@ export function parsePlanningLaunch(searchParams: Record<string, RawParam>): Pla
  * sheet 6); the host is a route, so the origin resolves to the surface that owns
  * that context — the project roadmap being the project-scoped default.
  */
+/** @deprecated Resolves a RETURN route, which is the defect MOTIR-4725 exists
+ *  to remove: from `/backlog`, `/boards`, `/ready` or `/home` it sends the
+ *  reader somewhere else entirely. Closing an overlay is
+ *  {@link withoutPlanningOverlay} of the address you are already at. Deleted by
+ *  MOTIR-4732. */
 export function planningLaunchBackHref(launch: PlanningLaunch): string {
   if (launch.from === 'work-item' && launch.itemKey) {
     return `/items/${encodeURIComponent(launch.itemKey)}`;
   }
   if (launch.from === 'convention-refine') return '/code-health';
   return '/roadmap';
+}
+
+/* ────────────────────────────────────────────────────────────────────────────
+ * THE OVERLAY ADDRESS (MOTIR-4728, under story MOTIR-4725)
+ *
+ * The workspace is a full-screen OVERLAY on the page you are already on, not a
+ * route (`design/ai-chat/design-notes.md` § *Opening & exiting — a full-screen
+ * overlay ON TOP of the app (sheet 6)*). So the launcher's job changes shape:
+ * instead of building a destination href, it MERGES a namespaced query onto the
+ * caller's CURRENT address, STRIPS that query for Close, and PARSES it back.
+ *
+ * ⚠️ THE NAMES ARE THE DESIGN'S, NOT THIS MODULE'S. They are recorded in
+ * `design/ai-chat/design-notes.md` § *The ADDRESS — a NAMESPACED query, settled
+ * here because three cards read it*, exactly as `design/runs/design-notes.md`
+ * records `/runs?run=<id>`, because THREE files have to agree on them: this
+ * module writes and parses them, the overlay reads them off `useSearchParams`,
+ * and the retiring `/planning` forward rewrites the old `mode`/`from`/`item`/
+ * `repo` onto them. `OVERLAY_PARAM_NAMES` below is the single copy in code, and
+ * `tests/planning/launcher.test.ts` asserts it against those names verbatim so a
+ * rename in either home fails a test.
+ *
+ * WHY NAMESPACED, measured at `origin/main` `71896757c`: the overlay can open on
+ * ANY authed route, so its query rides beside the host page's own — and the
+ * obvious names are taken. `?item=` on `/roadmap` is the drilled LEVEL
+ * (MOTIR-3836's `resolveArrivalTrail`), `?peek=` is the quick view on `/items`,
+ * `/ready` and `/boards`, `?run=` is the run modal, and `?mode=` / `?from=` are
+ * generic enough to collide with anything. A merge that clobbered one of those
+ * would silently change the page underneath the overlay.
+ * ─────────────────────────────────────────────────────────────────────────── */
+
+/**
+ * The four parameters the overlay's address carries.
+ *
+ * `plan` is BOTH the presence switch and the mode — the way `?run=` and `?peek=`
+ * each own one word. Its presence is what opens the overlay, so "is the overlay
+ * open?" is one lookup; and because the mode is already total (anything
+ * unrecognised falls back to `project`), it can ride that key without a second
+ * degradation path.
+ */
+export const OVERLAY_PARAM_NAMES = {
+  /** the presence switch AND the resolved {@link PlanningMode}. */
+  mode: 'plan',
+  /** the {@link PlanningOrigin} — what decides which of the two below may be read. */
+  origin: 'planFrom',
+  /** the anchor work-item key; written ONLY for a `work-item` origin. */
+  item: 'planItem',
+  /** the repository key; written ONLY for a `convention-refine` origin. */
+  repo: 'planRepo',
+} as const;
+
+/** Every overlay parameter name, for the strip and the collision guards. */
+const OVERLAY_PARAMS: readonly string[] = Object.values(OVERLAY_PARAM_NAMES);
+
+/**
+ * The overlay's parameters for a launch context — the mode, the origin, and the
+ * origin's own payload.
+ *
+ * The payload is gated on the ORIGIN on the way OUT as well as on the way back
+ * (`parsePlanningLaunch`'s own rule), so the two halves cannot disagree about
+ * which contexts may carry a target.
+ */
+export function planningOverlaySearch(context: PlanningLaunchContext): URLSearchParams {
+  const params = new URLSearchParams({
+    [OVERLAY_PARAM_NAMES.mode]: resolvePlanningMode(context),
+    [OVERLAY_PARAM_NAMES.origin]: context.kind,
+  });
+  if (context.kind === 'work-item') params.set(OVERLAY_PARAM_NAMES.item, context.itemKey);
+  if (context.kind === 'convention-refine') params.set(OVERLAY_PARAM_NAMES.repo, context.repoKey);
+  return params;
+}
+
+/**
+ * Split an href into its path (with any hash) and its query, WITHOUT resolving
+ * it against an origin.
+ *
+ * `new URL(href)` needs a base and would normalise the path; these hrefs are the
+ * app-relative ones `usePathname()` + `useSearchParams()` hand a client, and the
+ * one thing this module must not do is change the host page's address in any way
+ * other than adding or removing the four parameters above.
+ */
+function splitHref(href: string): { path: string; query: URLSearchParams; hash: string } {
+  const hashAt = href.indexOf('#');
+  const hash = hashAt === -1 ? '' : href.slice(hashAt);
+  const withoutHash = hashAt === -1 ? href : href.slice(0, hashAt);
+  const queryAt = withoutHash.indexOf('?');
+  return {
+    path: queryAt === -1 ? withoutHash : withoutHash.slice(0, queryAt),
+    query: new URLSearchParams(queryAt === -1 ? '' : withoutHash.slice(queryAt + 1)),
+    hash,
+  };
+}
+
+/** Re-assemble, leaving NO dangling `?` when the query came out empty. */
+function joinHref(path: string, query: URLSearchParams, hash: string): string {
+  const qs = query.toString();
+  return `${path}${qs ? `?${qs}` : ''}${hash}`;
+}
+
+/**
+ * The OPEN address: `href` — the page the reader is on, with its own query — plus
+ * the overlay's parameters.
+ *
+ * **Every host parameter survives byte for byte.** `/roadmap?item=MOTIR-12` keeps
+ * its drilled level and `/items?peek=MOTIR-12` keeps its quick view, which is the
+ * whole reason the names are namespaced.
+ *
+ * **Launching over an ALREADY-OPEN overlay REPLACES its parameters** rather than
+ * appending a second set — re-targeting from the canvas's own per-item entrance
+ * is a same-address navigation, and two `plan=` values would make the parse
+ * order-dependent.
+ */
+export function withPlanningOverlay(href: string, context: PlanningLaunchContext): string {
+  const { path, query, hash } = splitHref(href);
+  for (const name of OVERLAY_PARAMS) query.delete(name);
+  for (const [name, value] of planningOverlaySearch(context)) query.set(name, value);
+  return joinHref(path, query, hash);
+}
+
+/**
+ * The CLOSE address: `href` with ONLY the overlay's parameters removed.
+ *
+ * This is what Close, `Esc`, the scrim and the guard's *Discard* all write. The
+ * host page's own query is untouched, so the filter and the drilled level the
+ * reader had are exactly what they come back to — and an href that carried
+ * nothing else comes back with no trailing `?`.
+ */
+export function withoutPlanningOverlay(href: string): string {
+  const { path, query, hash } = splitHref(href);
+  for (const name of OVERLAY_PARAMS) query.delete(name);
+  return joinHref(path, query, hash);
+}
+
+/**
+ * What a `searchParams` looks like from either side of the render boundary: a
+ * `URLSearchParams` (what `useSearchParams()` hands a client component) or the
+ * plain record a Server Component's `searchParams` prop carries. The `/planning`
+ * forward (MOTIR-4732) parses on the server, so both are accepted here rather
+ * than at each call site.
+ */
+export type PlanningOverlayParams = URLSearchParams | Record<string, RawParam>;
+
+function readParam(params: PlanningOverlayParams, name: string): RawParam {
+  return params instanceof URLSearchParams ? (params.getAll(name) ?? undefined) : params[name];
+}
+
+/**
+ * Read the launch back off an address — **`null` when the overlay is not in it**,
+ * which is the shell's mount predicate: presence of `plan` is what opens the
+ * workspace.
+ *
+ * When it IS present the result is the same total {@link PlanningLaunch}
+ * `parsePlanningLaunch` produces — an absent or unrecognised value degrades to
+ * the coarse project default rather than erroring, because this is parsed from a
+ * user-editable URL — including the anti-smuggling rule: `itemKey` survives only
+ * for a `work-item` origin and `repoKey` only for `convention-refine`, so a
+ * hand-edited `?plan=project&planFrom=roadmap&planItem=MOTIR-1` opens the project
+ * conversation and carries no target.
+ */
+export function parsePlanningOverlay(params: PlanningOverlayParams): PlanningLaunch | null {
+  if (first(readParam(params, OVERLAY_PARAM_NAMES.mode)) === null) return null;
+  const from = parsePlanningOrigin(readParam(params, OVERLAY_PARAM_NAMES.origin));
+  return {
+    mode: parsePlanningMode(readParam(params, OVERLAY_PARAM_NAMES.mode)),
+    from,
+    itemKey: from === 'work-item' ? first(readParam(params, OVERLAY_PARAM_NAMES.item)) : null,
+    repoKey:
+      from === 'convention-refine' ? first(readParam(params, OVERLAY_PARAM_NAMES.repo)) : null,
+  };
 }
