@@ -438,8 +438,16 @@ export type BulkLegId = (typeof BULK_LEG_IDS)[number];
  * It is cheap for a spec that drives eleven style switches twice over because it
  * runs on `/tokens`, which is public: no sign-up, no seeding, no
  * `resetDatabase()` hook. The four test bodies are 0.6 / 1.7 / 1.5 / 1.5 s and
- * the ~100 s wall clock is the build, which the legs pay once. Re-measure from
- * the first green CI run that includes it.
+ * the ~100 s wall clock is the build, which the legs pay once.
+ *
+ * ⚠️ RE-MEASURED FROM CI, which is what every entry above asks for and almost
+ * none of them has had done. Run **34065849062** (2026-09-06, PR #2669, green)
+ * ran it on `bulk-6` at **1.2 / 3.8 / 3.4 / 3.3 s = 11.7 s**, and the entry is
+ * now **12.0**. The local readings were 5.3 / 7.5 / 7.9 — so CI costs about 1.5x
+ * the best local one, and the calibration note above holds exactly as written: a
+ * local reading runs at or below the CI cost, never above it. Recorded from the
+ * CI figure rather than the local one, because that is the number the
+ * bin-packer is actually packing.
  */
 export const SPEC_COST_SECONDS: Readonly<Record<string, number>> = {
   // MOTIR-4094 — promoted receipt specs, ESTIMATED for their first main-lane
@@ -518,7 +526,7 @@ export const SPEC_COST_SECONDS: Readonly<Record<string, number>> = {
   'github.spec.ts': 8.3,
   'general-attachment.spec.ts': 8.0,
   'gitlab.spec.ts': 6.1,
-  'hero-ai-control-styles.spec.ts': 8.0,
+  'hero-ai-control-styles.spec.ts': 12.0,
   'home.spec.ts': 10.9,
   'import.spec.ts': 9.1,
   'implemented-lifecycle.spec.ts': 16.0,
