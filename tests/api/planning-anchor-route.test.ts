@@ -243,6 +243,46 @@ describe('GET /api/work-items/planning-anchor · the refusals', () => {
     expect(JSON.parse(a)).toEqual({ code: 'NOT_FOUND', error: 'Work item not available.' });
   });
 
+  it('a key in a project the actor may NOT BROWSE is the same 404', async () => {
+    // The OTHER arm of the no-existence-leak contract, and a different code path:
+    // above, the item is absent from the actor's project; here it IS the active
+    // project's item and `assertCanBrowse` refuses. Both must be one answer —
+    // a 403 would say "it exists but you can't see it", which is the leak.
+    const owner = await makeScenario('private-owner');
+    signIn(owner);
+    const { leaf } = await makeTree(owner);
+
+    // A second workspace member who was never added to the project, and a
+    // project that does not admit non-members.
+    const outsiderEmail = `anchor-outsider-${++seq}@example.com`;
+    const outsider = await usersService.createUser({
+      email: outsiderEmail,
+      password: PASSWORD,
+      name: 'Grace Hopper',
+    });
+    await adminDb.project.update({
+      where: { id: owner.project.id },
+      data: { accessLevel: 'private' },
+    });
+    await adminDb.workspaceMembership.create({
+      data: { userId: outsider.id, workspaceId: owner.workspace.id, role: 'member' },
+    });
+
+    // The outsider signs in with the OWNER's project active — the shape a stale
+    // cookie or a removed membership leaves behind.
+    session.current = { user: { id: outsider.id, email: outsiderEmail, name: 'Grace Hopper' } };
+    activeCtx.current = {
+      userId: outsider.id,
+      workspaceId: owner.workspace.id,
+      projectId: owner.project.id,
+      project: { ...owner.project, accessLevel: 'private' },
+    };
+
+    const res = await anchorViaRoute(leaf.identifier);
+    expect(res.status).toBe(404);
+    expect(await res.json()).toEqual({ code: 'NOT_FOUND', error: 'Work item not available.' });
+  });
+
   it('a DELETED key is the same 404', async () => {
     const s = await makeScenario('gone');
     signIn(s);

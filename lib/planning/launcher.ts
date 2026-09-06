@@ -321,6 +321,12 @@ export function withoutPlanningOverlay(href: string): string {
 export type PlanningOverlayParams = URLSearchParams | Record<string, RawParam>;
 
 function readParam(params: PlanningOverlayParams, name: string): RawParam {
+  /* v8 ignore next -- `URLSearchParams.getAll` returns an ARRAY for an absent
+     name, never null or undefined, so the `??` arm is unreachable by the Web
+     API's own contract. It is kept because the value crosses into `RawParam`,
+     which admits `undefined`, and dropping it would make the type lie about a
+     shape nothing produces. `tests/planning/planning-overlay-story-gate.test.ts`
+     pins the invariant it stands on. */
   return params instanceof URLSearchParams ? (params.getAll(name) ?? undefined) : params[name];
 }
 

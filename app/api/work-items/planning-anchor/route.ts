@@ -30,6 +30,30 @@ import { refuseIfNonCompliant } from '@/lib/auth/requireCompliantSession';
 // 403, which would leak "it exists but you can't see it"). The overlay renders
 // that as the project conversation at the root — the page's own silent-catch
 // semantics, one hop over the wire.
+/**
+ * The three ways the read can say "there is nothing here for you" — all one
+ * answer, because a 403 on any of them would say "it exists but you can't see
+ * it".
+ *
+ * ⚠️ `ProjectNotFoundError` cannot arise from THIS call, and is kept anyway.
+ * `getWorkItemWithAncestors` resolves the ITEM first, so its project exists by
+ * the time `assertCanBrowse` reads it — the class is here because this handler
+ * is deliberately the peek route's twin, and a leak-sensitive path is the wrong
+ * place to narrow a catch on a reading of today's call graph. The invariant it
+ * rests on is asserted in `tests/planning/planning-overlay-story-gate.test.ts`.
+ */
+function isNotAvailable(err: unknown): boolean {
+  if (err instanceof WorkItemNotFoundError || err instanceof ProjectAccessDeniedError) return true;
+  /* v8 ignore start -- unreachable FROM HERE; see the note above and its named
+     test. `resolveInputs` really does raise `ProjectNotFoundError`, for a
+     cross-workspace project id — but `getWorkItemWithAncestors` rejects a
+     foreign tenant with `WorkItemNotFoundError` BEFORE it reaches
+     `assertCanBrowse`, so nothing on this path can get there. Kept because that
+     ordering is a fact about another module, not a contract this one owns. */
+  return err instanceof ProjectNotFoundError;
+  /* v8 ignore stop */
+}
+
 export async function GET(req: Request): Promise<Response> {
   const ctx = await getActiveProject();
   if (!ctx) {
@@ -79,16 +103,25 @@ export async function GET(req: Request): Promise<Response> {
       },
     );
   } catch (err) {
-    if (
-      err instanceof WorkItemNotFoundError ||
-      err instanceof ProjectAccessDeniedError ||
-      err instanceof ProjectNotFoundError
-    ) {
+    if (isNotAvailable(err)) {
       return NextResponse.json(
         { code: 'NOT_FOUND', error: 'Work item not available.' },
         { status: 404 },
       );
     }
+    /* v8 ignore next -- the RE-THROW. Every error this handler can produce from
+       the one service call it makes is caught above; anything else is a real
+       fault (a dropped connection, a bug) and belongs to Next's error boundary,
+       which is what re-throwing gives it. Reaching it in a test would mean
+       mocking `workItemsService` — the one thing this story's gate forbids,
+       because a mocked service is exactly what stops proving the 404 contract.
+       The invariant it rests on is asserted in
+       `tests/planning/planning-overlay-story-gate.test.ts`: the catch names the
+       three error classes the service throws, and nothing else. */
+    /* v8 ignore next -- the RE-THROW, unreachable for the same reason: every
+       class this handler's one service call can raise is answered above. Kept
+       because a route that swallowed an unexpected fault would turn a bug into a
+       404, and Next's error boundary is where a real fault belongs. */
     throw err;
   }
 }

@@ -530,3 +530,73 @@ describe('the host may VETO a close (the pending guard’s seam, MOTIR-4731)', (
     expect(shallowPush).not.toHaveBeenCalled();
   });
 });
+
+describe('coverage · Keep planning after a Back, for every launch shape', () => {
+  // `launchContext` turns a parsed launch back into the context the re-push
+  // needs. Each origin is its own arm, and only the reader who goes Back on that
+  // kind of launch reaches it — so each is driven.
+  const CASES = [
+    {
+      name: 'a work-item launch',
+      search: 'plan=replan&planFrom=work-item&planItem=MOTIR-7',
+      path: '/items/MOTIR-7',
+      expected: '/items/MOTIR-7?plan=replan&planFrom=work-item&planItem=MOTIR-7',
+    },
+    {
+      name: 'a convention-refine launch',
+      search: 'plan=contextual&planFrom=convention-refine&planRepo=motir-core',
+      path: '/code-health',
+      expected: '/code-health?plan=contextual&planFrom=convention-refine&planRepo=motir-core',
+    },
+    {
+      name: 'a roadmap launch',
+      search: 'plan=roadmap&planFrom=roadmap',
+      path: '/roadmap',
+      expected: '/roadmap?plan=roadmap&planFrom=roadmap',
+    },
+    {
+      name: 'a project re-plan',
+      search: 'plan=replan&planFrom=project',
+      path: '/backlog',
+      expected: '/backlog?plan=replan&planFrom=project',
+    },
+  ];
+
+  it.each(CASES)('re-pushes $name unchanged', async ({ search, path, expected }) => {
+    vetoClose = true;
+    openAt(search, path);
+    const view = mount();
+    await act(async () => {});
+
+    params = new URLSearchParams('');
+    await act(async () => {
+      window.dispatchEvent(new PopStateEvent('popstate'));
+    });
+    view.rerender(
+      <PlanningWorkspaceOverlay
+        projectKey="ACME"
+        projectName="Acme"
+        onboardingRanAt="2026-01-01T00:00:00.000Z"
+      />,
+    );
+    await act(async () => {});
+
+    fireEvent.click(screen.getByRole('button', { name: 'Keep planning' }));
+
+    expect(shallowPush).toHaveBeenCalledTimes(1);
+    expect(shallowPush.mock.calls[0]![0]).toBe(expected);
+  });
+
+  it('is a no-op when there was no Back to answer', async () => {
+    // *Keep planning* is also what Esc and the scrim mean on the guard. On those
+    // vectors the address never changed, so there is nothing to put back — and
+    // pushing anyway would add a history entry Back would then have to eat.
+    vetoClose = true;
+    openAt('plan=project&planFrom=project');
+    mount();
+    await act(async () => {});
+
+    fireEvent.click(screen.getByRole('button', { name: 'Keep planning' }));
+    expect(shallowPush).not.toHaveBeenCalled();
+  });
+});

@@ -1926,6 +1926,25 @@ export default defineConfig({
         'app/**/admin/tenants/[orgId]/_components/ClassificationBar.tsx',
         'app/**/organization/usage/_components/searchUsage.ts',
         'app/**/organization/billing/_components/searchFigures.ts',
+
+        // ── Story MOTIR-4725 · the planning workspace as an OVERLAY ──────────
+        // Its story gate (MOTIR-4733). Every file here was MEASURED on this
+        // branch before being pinned below, over `tests/planning/`,
+        // `tests/integration/planning/`, `tests/api/planning-anchor-route.test.ts`
+        // and the four component suites the story ships.
+        //
+        // ⚠️ `lib/planning/launcher.ts` is NOT repeated — it has been gated since
+        // MOTIR-1299 and its entry is above.
+        'lib/planning/planPending.ts',
+        'lib/planning/planningAnchorClient.ts',
+        'lib/hooks/useOpenPlanningWorkspace.ts',
+        'components/planning/PlanningWorkspaceOverlay.tsx',
+        'components/planning/PlanCloseGuard.tsx',
+        'components/planning/PlanningWorkspaceHost.tsx',
+        'app/api/work-items/planning-anchor/route.ts',
+        // The `/planning` FORWARD. A route-group path is entered as `app/**/…`
+        // (the note above) — `app/(authed)/planning/page.tsx` resolves to nothing.
+        'app/**/planning/page.tsx',
       ],
       reporter: ['text', 'text-summary'],
       // Per-file thresholds keyed by glob: each of the six modules gates
@@ -1936,6 +1955,62 @@ export default defineConfig({
       // fails SILENTLY when it matches nothing — see the route-group note on
       // `include`. Write a route-group path as `app/**/…`.
       thresholds: {
+        // ── Story MOTIR-4725 · the planning workspace as an OVERLAY ──────────
+        // Pinned at the project floor after measuring each on this branch
+        // (MOTIR-4733). Statements/lines/functions came out at 100 across the
+        // set; branches at 92.85–100 except the one file noted below.
+        'lib/planning/planPending.ts': { lines: 90, functions: 90, branches: 90, statements: 90 },
+        'lib/planning/planningAnchorClient.ts': {
+          lines: 90,
+          functions: 90,
+          branches: 90,
+          statements: 90,
+        },
+        'lib/hooks/useOpenPlanningWorkspace.ts': {
+          lines: 90,
+          functions: 90,
+          branches: 90,
+          statements: 90,
+        },
+        'components/planning/PlanningWorkspaceOverlay.tsx': {
+          lines: 90,
+          functions: 90,
+          branches: 90,
+          statements: 90,
+        },
+        'components/planning/PlanCloseGuard.tsx': {
+          lines: 90,
+          functions: 90,
+          branches: 90,
+          statements: 90,
+        },
+        'components/planning/PlanningWorkspaceHost.tsx': {
+          lines: 90,
+          functions: 90,
+          branches: 90,
+          statements: 90,
+        },
+        'app/**/planning/page.tsx': { lines: 90, functions: 90, branches: 90, statements: 90 },
+        // ⚠️ BRANCHES PINNED AT 83, WITH A REASON, AND THE OTHER THREE AT 100.
+        // The anchor route's two remaining branches are the SAME unreachable
+        // case counted twice: `ProjectNotFoundError` cannot arrive here (the
+        // service rejects a foreign tenant with `WorkItemNotFoundError` before
+        // the access read that raises it), and the re-throw behind it is
+        // therefore unreachable too. Both carry a `v8 ignore` naming the test
+        // that asserts the ordering they rest on — but v8 counts an implicit
+        // `else` on the LINE OF THE `if`, which no comment on the branch below
+        // can suppress. Reaching either would mean mocking `workItemsService`,
+        // which is exactly what stops proving this route's 404 contract. So the
+        // number is pinned at what is real, with the reason, rather than the
+        // guard being weakened for the file as a whole: statements, lines and
+        // functions all gate at 100 here.
+        // MEASURED: 100 statements / 83.33 branches / 100 functions / 100 lines.
+        'app/api/work-items/planning-anchor/route.ts': {
+          lines: 100,
+          functions: 100,
+          branches: 83,
+          statements: 100,
+        },
         // Story MOTIR-3440 · Subtask MOTIR-3449 — the two arrival primitives,
         // MEASURED at 100/100/100/100 each before being pinned (see `include`).
         'components/ui/PageSkeleton.tsx': {

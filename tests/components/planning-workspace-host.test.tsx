@@ -25,6 +25,21 @@ const { push, refresh } = vi.hoisted(() => ({ push: vi.fn(), refresh: vi.fn() })
 const noop = () => {};
 vi.mock('next/navigation', () => ({ useRouter: () => ({ push, refresh }) }));
 
+// The `@`-mention search is the ONE network-backed thing inside the real
+// composer. Stubbed so the picker can be driven without a debounce and a
+// endpoint — what is under test is that the HOST adds what the composer hands
+// it, not what the search returns. Inert unless a test types an `@` query.
+vi.mock('@/lib/hooks/useWorkItemTargetSearch', () => ({
+  useWorkItemTargetSearch: (query: string, enabled: boolean) => ({
+    results:
+      enabled && query.trim().length >= 2
+        ? [{ id: 'wi_9', identifier: 'MOTIR-9', title: 'Billing', kind: 'story' }]
+        : [],
+    loading: false,
+    tooShort: query.trim().length < 2,
+  }),
+}));
+
 vi.mock('@/components/planning/PlanChangeCanvas', () => ({
   PlanChangeCanvas: ({
     projectKey,
@@ -669,5 +684,59 @@ describe('PlanningWorkspaceHost — the audit-coverage banner is admin-only', ()
 
     expect(screen.queryByRole('status')).toBeNull();
     vi.unstubAllGlobals();
+  });
+});
+
+describe('coverage · the TARGET SET the host owns (MOTIR-4733)', () => {
+  it('ADDS a target the composer’s `@` picker hands it', async () => {
+    // The other half of the set the host owns. The composer's mention picker is
+    // its only producer, so it is driven for real — only the search is stubbed
+    // (see the mock at the top of this file), because a candidate list is not
+    // what this asserts.
+    renderHost({ mode: 'replan', from: 'project' });
+    expect(screen.getByTestId('canvas-stub').getAttribute('data-targets')).toBe('');
+
+    const composer = screen.getByRole('textbox');
+    await act(async () => {
+      fireEvent.change(composer, { target: { value: '@Billing' } });
+    });
+
+    const option = screen.queryByRole('option', { name: /MOTIR-9/ });
+    // If the listbox did not open, say so rather than passing on a missing
+    // element — a `queryBy` that finds nothing is not a green test.
+    expect(option, 'the mention listbox did not open').not.toBeNull();
+    // ⚠️ `mouseDown`, not `click`: the option commits on POINTER DOWN so the
+    // composer's input never loses focus to it (`TargetSearchListbox`). A
+    // `click` here would assert nothing and pass silently.
+    await act(async () => {
+      fireEvent.mouseDown(option!);
+    });
+
+    // The CANVAS rings it — which is the point of the set living on the host
+    // rather than in the rail: both panes read it.
+    expect(screen.getByTestId('canvas-stub').getAttribute('data-targets')).toBe('wi_9');
+  });
+
+  it('removes the entrance’s pre-filled target when the chip’s ⨉ is pressed', () => {
+    // `addTarget` / `removeTarget` live on the HOST, not the rail, because both
+    // panes read the set: the composer collects it and the canvas rings it. They
+    // are handed to the real composer, so this drives the real chip — the only
+    // place either is reachable from.
+    const target = { id: 'wi_7', identifier: 'MOTIR-7', title: 'The anchor', kind: 'subtask' };
+    renderHost(
+      { mode: 'contextual', from: 'work-item', item: 'MOTIR-7' },
+      { initialTarget: target as PlanningTarget },
+    );
+
+    // The canvas RINGS it while it is in the set…
+    expect(screen.getByTestId('canvas-stub').getAttribute('data-targets')).toBe('wi_7');
+
+    const remove = screen.getByRole('button', { name: /MOTIR-7/ });
+    fireEvent.click(remove);
+
+    // …and stops the moment it leaves. The entrance's item is a SEED, not a
+    // lock: the user can drop it and plan about something else.
+    expect(screen.getByTestId('canvas-stub').getAttribute('data-targets')).toBe('');
+    expect(screen.queryByTestId('planning-target-chip')).toBeNull();
   });
 });

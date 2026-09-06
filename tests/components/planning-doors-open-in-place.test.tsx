@@ -31,6 +31,7 @@ vi.mock('@/lib/navigation/shallowUrl', () => ({ shallowPush, shallowReplace: vi.
 
 const { PlanWithAILauncher } = await import('@/components/planning/PlanWithAILauncher');
 const { WorkItemPlanEntrance } = await import('@/components/planning/WorkItemPlanEntrance');
+const { useOpenPlanningWorkspace } = await import('@/lib/hooks/useOpenPlanningWorkspace');
 
 beforeEach(() => {
   pathname = '/backlog';
@@ -252,5 +253,34 @@ describe('the doors resolve through ONE module', () => {
     const registry = readFileSync(join(process.cwd(), 'lib/planning/aiCallout.ts'), 'utf8');
     expect(registry).not.toMatch(/from ['"]react/);
     expect(registry).not.toMatch(/from ['"]next\//);
+  });
+});
+
+describe('coverage · the opener called WITHOUT a click event', () => {
+  it('opens in place — the ⌘K path, which has no anchor to intercept', () => {
+    // The palette closes itself and then calls `open()` with no argument: there
+    // is no link and no default to prevent, so the handler must still write the
+    // address. This arm is only reached from a keyboard action.
+    const seen: string[] = [];
+    function Probe() {
+      const { open } = useOpenPlanningWorkspace({ kind: 'project' });
+      return (
+        <button
+          type="button"
+          onClick={() => {
+            open();
+            seen.push('called');
+          }}
+        >
+          ⌘K Plan with AI
+        </button>
+      );
+    }
+
+    renderWithIntl(<Probe />);
+    fireEvent.click(screen.getByRole('button', { name: '⌘K Plan with AI' }));
+
+    expect(seen).toEqual(['called']);
+    expect(shallowPush).toHaveBeenCalledWith('/backlog?plan=project&planFrom=project');
   });
 });

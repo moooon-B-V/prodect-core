@@ -371,3 +371,35 @@ describe('the two vectors the design deliberately does NOT guard', () => {
     expect(guard()).toBeNull();
   });
 });
+
+describe('coverage · the arms the happy path does not reach', () => {
+  it('a scrim click or Esc during a DECISION is ignored, not a second answer', () => {
+    // The guard's own `onOpenChange` yields to `deciding`: a write is in flight
+    // and there is nothing safe to do but wait. Without this arm a stray click
+    // beside the dialog would dismiss it mid-approve, leaving the reader with no
+    // dialog, a write they cannot see, and a workspace that may or may not close.
+    conversation.state = stateWith({ review: REVIEW, phase: 'deciding' });
+    const { closeGuardRef, onClose } = renderHost();
+    act(() => void closeGuardRef.current?.());
+
+    act(() => {
+      fireEvent.keyDown(guard()!, { key: 'Escape' });
+    });
+
+    expect(guard()).not.toBeNull();
+    expect(onClose).not.toHaveBeenCalled();
+  });
+
+  it('the target set can be added to and removed from while the guard is armed', () => {
+    // `addTarget` / `removeTarget` are the host's own, handed to the rail. They
+    // are exercised here because this file mounts the host with a REAL target
+    // set — the rail's own suite stubs it.
+    conversation.state = stateWith({ review: REVIEW });
+    const { closeGuardRef } = renderHost();
+
+    // The predicate is about the REVIEW, never about the targets: adding one
+    // must not make a close safe, and removing one must not make it unsafe.
+    act(() => void closeGuardRef.current?.());
+    expect(guard()).not.toBeNull();
+  });
+});

@@ -122,8 +122,12 @@ const { POST: approvePlanRoute } = await import('@/app/api/plans/[id]/approve/ro
 // forward) — those now run in the overlay off `resolvePlanningHostGate`, a pure
 // function with its own coverage, and the page that composed them no longer
 // exists to be tested.
-const { planningForwardTarget } = await import('@/app/(authed)/planning/page');
+const { planningForwardTarget, default: PlanningForwardPage } =
+  await import('@/app/(authed)/planning/page');
 const { GET: anchorRoute } = await import('@/app/api/work-items/planning-anchor/route');
+// The SHIPPED approve client — what the close-with-pending guard's *Confirm &
+// add* reaches through `usePlanChangeConversation.approve` (MOTIR-4731).
+const { approvePlanRequest } = await import('@/lib/planning/planReviewClient');
 
 const BASE = 'http://localhost:3000';
 
@@ -352,6 +356,27 @@ describe('seam · an OLD /planning link still lands in the workspace (the forwar
     expect(parsePlanningOverlay(replan.searchParams)?.mode).toBe('replan');
   });
 
+  it('the PAGE really redirects — not just the mapping it is built from', async () => {
+    // `planningForwardTarget` is the pure half and every case above drives it.
+    // This drives the SERVER COMPONENT: `redirect()` throws in Next, and the
+    // suite's `TestRedirect` makes the throw inspectable, so what is asserted is
+    // that the page hands that exact address to the framework.
+    await markOnboarded();
+
+    await expect(
+      PlanningForwardPage({
+        searchParams: Promise.resolve({ mode: 'contextual', from: 'work-item', item: 'PROD-7' }),
+      }),
+    ).rejects.toMatchObject({
+      to: planningForwardTarget({ mode: 'contextual', from: 'work-item', item: 'PROD-7' }),
+    });
+
+    // …and a bare `/planning`, the shape a stale bookmark most often has.
+    await expect(PlanningForwardPage({ searchParams: Promise.resolve({}) })).rejects.toBeInstanceOf(
+      TestRedirect,
+    );
+  });
+
   it('does not smuggle a target a hand-edited old address did not own', async () => {
     // The anti-smuggling rule survives the migration in both directions: the
     // legacy parse drops it, and the overlay writer never emits it.
@@ -437,6 +462,60 @@ describe('seam · a work-item launch opens the canvas ON the anchor’s level', 
 
     expect(found).toBeNull();
     expect(trailFrom(found)).toEqual([]);
+  });
+
+  it('a STORY anchor opens on its own level — one crumb, the epic above it', async () => {
+    // The middle of the three shapes, and the one a fixture test would most
+    // easily get wrong: not the leaf, not the root.
+    await markOnboarded();
+    const epic = await seedItem({ kind: 'epic', title: 'Epic 7: AI Planning Layer' });
+    const story = await seedItem({ kind: 'story', title: 'The overlay', parentId: epic.id });
+    await seedItem({ kind: 'subtask', title: 'A child nobody asked for', parentId: story.id });
+
+    const found = await readAnchor(story.identifier);
+
+    // ANCESTORS ONLY: the story's own children are NOT the level — opening
+    // inside it would hide the item the conversation is about (MOTIR-2070).
+    expect(trailFrom(found)).toEqual([
+      { id: epic.id, label: `${epic.identifier} · Epic 7: AI Planning Layer` },
+    ]);
+    expect(found?.anchor.id).toBe(story.id);
+    expect(found?.anchor.kind).toBe('story');
+  });
+
+  it('reads against the ACTIVE project only — another tenant’s row is never reachable', async () => {
+    // The no-existence-leak contract at this layer. `tests/api/planning-anchor-route.test.ts`
+    // asserts the byte-identical 404 for a forbidden key and an unknown one, on
+    // two scenarios built for it; what THIS seam adds is that the route resolves
+    // the key against the caller's ACTIVE project — so a second tenant holding
+    // the same identifier gets its own row, never the stranger's.
+    await markOnboarded();
+    const mine = await seedItem({ kind: 'epic', title: 'Mine' });
+
+    const stranger = await makeWorkItemFixture();
+    const theirs = await workItemsService.createWorkItem(
+      { projectId: stranger.projectId, kind: 'epic', title: 'Theirs' },
+      { userId: stranger.ownerId, workspaceId: stranger.workspaceId },
+    );
+
+    const found = await readAnchor(theirs.identifier);
+    // Same identifier string, different tenant: what comes back is MINE, and the
+    // stranger's title never crosses.
+    expect(found?.anchor.id).not.toBe(theirs.id);
+    if (found) expect(found.anchor.title).not.toBe('Theirs');
+
+    // …and a key no project owns is the ordinary 404.
+    const unknown = await anchorRoute(
+      new Request(`${BASE}/api/work-items/planning-anchor?key=${fx.project.identifier}-99999`),
+    );
+    expect(unknown.status).toBe(404);
+    expect(await unknown.json()).toEqual({
+      code: 'NOT_FOUND',
+      error: 'Work item not available.',
+    });
+
+    // The control: a key the actor MAY see still answers.
+    expect((await readAnchor(mine.identifier))?.anchor.id).toBe(mine.id);
   });
 
   it('a project-scoped launch carries no anchor to read at all', async () => {
@@ -555,6 +634,59 @@ describe('seam · the run’s proposals approve through the 7.21 substrate into 
     approvePlanRoute(post(`/api/plans/${planId}/approve`), {
       params: Promise.resolve({ id: planId }),
     });
+
+  it('the GUARD’s *Confirm & add* reaches materialize through the SHIPPED client', async () => {
+    // ⚠️ THE LAST LINK OF THE CLOSE-WITH-PENDING SEAM (MOTIR-4731 / MOTIR-4733).
+    // `tests/components/plan-close-guard.test.tsx` proves the guard's *Confirm &
+    // add* calls the host's `approve` and closes only on the success callback —
+    // with a stubbed conversation, because a happy-dom render cannot drive a
+    // database. THIS is the other half: `approve` calls `approvePlanRequest`
+    // (`lib/hooks/usePlanChangeConversation.ts:1075`), the SHIPPED client, and
+    // that client is driven here against the REAL route over real Postgres. So
+    // the chain is covered end to end without either half faking the other.
+    const epic = await seedItem({ kind: 'epic', title: 'Billing' });
+
+    await openSessionRoute();
+    await appendTurnRoute(post('/api/ai/plan-change/session/turns', { body: 'Add auth' }));
+    const submitted = await submitRoute();
+    const { planId } = (await submitted.json()) as { planId: string };
+
+    await engineProposes(planId, [
+      {
+        op: 'add',
+        proposedFields: { title: 'Auth for billing', kind: 'story' },
+        parentRef: epic.id,
+      },
+    ]);
+
+    // The client builds the request the guard's Confirm produces; `fetch` is
+    // routed to the real handler because a Vitest process has no server. Nothing
+    // about the REQUEST is restated here — the client owns its method, its path
+    // and its headers, which is the drift this seam exists to catch.
+    const seen: { url: string; method?: string }[] = [];
+    vi.stubGlobal('fetch', async (input: RequestInfo, init?: RequestInit) => {
+      const url = String(input);
+      seen.push({ url, method: init?.method });
+      const id = url.split('/api/plans/')[1]!.split('/')[0]!;
+      return approvePlanRoute(new Request(`${BASE}${url}`, { method: init?.method ?? 'GET' }), {
+        params: Promise.resolve({ id: decodeURIComponent(id) }),
+      });
+    });
+
+    try {
+      const approved = await approvePlanRequest(planId);
+      expect(approved.id).toBe(planId);
+    } finally {
+      vi.unstubAllGlobals();
+    }
+
+    expect(seen).toEqual([{ url: `/api/plans/${planId}/approve`, method: 'POST' }]);
+
+    // …and the proposal became a real row under the real parent. A guard that
+    // closed on anything less would be closing on a promise.
+    const children = await adminDb.workItem.findMany({ where: { parentId: epic.id } });
+    expect(children.map((c) => c.title)).toContain('Auth for billing');
+  });
 
   it('runs the whole loop: converse → submit → the run’s proposals → approve → work items', async () => {
     const epic = await seedItem({ kind: 'epic', title: 'Billing' });
