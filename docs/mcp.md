@@ -239,7 +239,7 @@ state.
 ## Tool catalog
 
 The server reports itself as `{ name: "motir", version: "0.1.0" }` in the MCP
-`initialize` handshake and registers **56 tools**.
+`initialize` handshake and registers **58 tools**.
 
 **Dual-content convention.** Every successful tool result carries **both** a
 human-readable `text` block (a compact summary a person watching the session can
@@ -1467,6 +1467,78 @@ the token `motir auth login` mints **does** carry — so a dispatched run can
 actually call it. Moving the publish from CI to the agent therefore added no
 credential and no trust; it only stopped requiring a script to be present in the
 repository.
+
+#### `create_acceptance_upload` · `publish_acceptance_result`
+
+Put the **acceptance receipt on a story** — the recording of ONE watchable run of
+the story working, which a person then watches and approves. It is the artifact
+the acceptance gate rests on, and the pair is the receipt half of the same idea
+`publish_design_result` is the design half of.
+
+**TWO calls, and the reason is the artifact.** A design asset arrives inline as
+base64; a recording cannot. The MCP route is a serverless function whose request
+body is capped well below a video (base64 is 1.37× the file, so an inline receipt
+would fail at roughly 3 MB — against a per-file entitlement of 10 MB baseline and
+100 MB on cloud `scaled`), and the bytes would have to be EMITTED by the agent as
+a tool argument: a 5 MB clip is 6.7 M characters. So this is the mint-then-PUT
+shape — the same one `docs/decisions/design-result.md` deliberately kept its
+routes for — expressed as two tools.
+
+1. **`create_acceptance_upload`** `{ key, hasTrace? }` → a short-lived (~5 min)
+   presigned PUT URL bound to one exact object and one content type.
+2. **PUT the bytes yourself** to `video.uploadUrl` with
+   `Content-Type: video/webm`. Nothing about this step goes through Motir.
+3. **`publish_acceptance_result`** `{ key, videoPathname, tracePathname?,
+chapters?, commitSha?, producedByKey? }` → the receipt.
+
+⚠️ **Nothing else publishes it**, exactly as with the design result. A story whose
+receipt never arrives looks identical to one that succeeded — spec green, checks
+green, pull request merged, and nobody able to watch the story work. **The
+confirmation is the `id` this call returns**, and its `status` is `pending`: the
+publish is not the acceptance, a person is.
+
+⚠️ **It replaced a CI publisher, and for the reason that generalises the design
+one.** MOTIR-4096 retired `scripts/upload-acceptance-video.mjs` and the Action
+beside it. A CI publisher can guarantee THIS repository's receipts and no
+customer's: it has to be present in whatever repository the work lands in, which
+is a requirement no repository Motir does not own can meet. What replaces it is
+the planner/runner pair — the planner writes the acceptance E2E subtask onto every
+user-facing story, and the runner's dispatch prompt tells it to publish what it
+recorded — and that pair needs a door that travels. This is that door. (Between
+4096 and MOTIR-4704 there was none, and three documents said there was.)
+
+| Input           | Type    | Required | Notes                                                                                                    |
+| --------------- | ------- | -------- | -------------------------------------------------------------------------------------------------------- |
+| `key`           | string  | yes      | The E2E card's key or the story's — a receipt belongs to the STORY, so a leaf resolves UP to its parent. |
+| `hasTrace`      | boolean | no       | Mint a second grant for the Playwright trace. `create_acceptance_upload` only.                           |
+| `videoPathname` | string  | yes      | The video grant's `pathname`, exactly as returned. `publish_acceptance_result` only.                     |
+| `tracePathname` | string  | no       | The trace grant's `pathname`, when one was minted and uploaded to.                                       |
+| `chapters`      | array   | no       | `{ label, tSeconds }` markers from the run's `chapters.json` — what a reviewer scrubs by.                |
+| `commitSha`     | string  | no       | The commit the run recorded at. Also the **idempotency key**, with `producedByKey`.                      |
+| `producedByKey` | string  | no       | The E2E work item that produced the recording.                                                           |
+
+**Output** — `create_acceptance_upload`: `workItemKey`, `video`
+(`pathname`, `uploadUrl`, `contentType`, `maxBytes`) and `trace` (the same, or
+null). `publish_acceptance_result`: `id`, `workItemKey`, `status`,
+`chapterCount`, `sizeBytes`, `createdAt`.
+
+**Refusals** — every one comes from the shipped acceptance-evidence service, so
+these tools and the HTTP publish routes answer one rule:
+
+| Refusal                           | When                                                                                                                            |
+| --------------------------------- | ------------------------------------------------------------------------------------------------------------------------------- |
+| `ACCEPTANCE_EVIDENCE_NOT_A_STORY` | `key` resolves to a container that is not a story and has no story parent. A receipt is a story-level artifact (Principle #18). |
+| `ACCEPTANCE_VIDEO_INELIGIBLE`     | The org has no paid AI plan, or the acceptance-video toggle is off. Checked BEFORE any object-store spend.                      |
+| blob missing                      | The `pathname` names no object — the PUT never happened, or went somewhere else. The register step HEADs every artifact.        |
+| pathname outside the prefix       | A key that is not under this story's own acceptance prefix. A lying or cross-tenant pathname can never be recorded.             |
+| oversize file                     | The object's AUTHORITATIVE size exceeds the org's per-file cap. Read from the store, never from what the caller reports.        |
+| disallowed media type             | Anything but `video/webm` / `video/mp4`. `text/html` is refused here exactly as video is refused by the design publisher.       |
+| unknown / cross-workspace `key`   | A 404, indistinguishable from a work item the token cannot reach.                                                               |
+
+**Permission** — `work_item:edit`. `ACCEPTANCE_PUBLISH_PERMISSION` _is_ that key,
+the same one `publish_design_result` asserts and one `CLI_TOKEN_GRANT` already
+carries — so a dispatched run can call these the day they ship, with no new
+credential and no widened grant.
 
 #### `link_work_items`
 
