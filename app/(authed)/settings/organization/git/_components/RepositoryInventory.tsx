@@ -210,7 +210,13 @@ export function RepositoryInventory({
             : td('title', { repo: confirming?.repo.fullName ?? '' })
         }
       >
-        <div className="flex flex-col gap-4">
+        {/* ⚠️ `Modal.Body` (MOTIR-2491): the affected-project chips are as many
+            as the organisation has projects using the repository — the count this
+            dialog exists to disclose — so they scroll and the actions stay
+            pinned. A dialog whose primary action is below the fold on exactly the
+            repositories with the widest blast radius is the worst possible place
+            for one. */}
+        <Modal.Body className="gap-4">
           {/* ⚠️ FOR GITHUB THE DISCLOSURE COMES BEFORE THE LINK-OUT, because once
               the admin is on github.com there is no dialog left to show them.
               GitLab's removal is in-app, so it is an ordinary destructive
@@ -268,7 +274,7 @@ export function RepositoryInventory({
               </a>
             ) : null}
           </div>
-        </div>
+        </Modal.Body>
       </Modal>
     </Card>
   );

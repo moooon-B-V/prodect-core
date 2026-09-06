@@ -108,7 +108,12 @@ export function AddRepositoryPicker({
 
   return (
     <Modal open={open} onOpenChange={setOpen} title={t('title')} description={t('subtitle')}>
-      <div className="flex flex-col gap-4">
+      {/* ⚠️ `Modal.Body`, not a bare flex column (MOTIR-2491). This list is as
+          tall as the organisation has repositories — a number this call site
+          cannot know — so the fields SCROLL and the connect segment below stays
+          reachable. A bare column would push `Connect a new one` off the fold for
+          exactly the organisations that have the most repositories. */}
+      <Modal.Body className="gap-4">
         {orgHasNothing ? null : (
           <Input
             label={t('searchLabel')}
@@ -217,7 +222,7 @@ export function AddRepositoryPicker({
             <p className="font-sans text-sm text-(--el-text-secondary)">{t('noInstallHref')}</p>
           )}
         </section>
-      </div>
+      </Modal.Body>
     </Modal>
   );
 }

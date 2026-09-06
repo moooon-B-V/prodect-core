@@ -237,6 +237,15 @@ export default defineConfig({
         'lib/legal/links.ts',
         'lib/legal/reconsentGate.ts',
         'lib/repositories/legalAcceptanceRepository.ts',
+        // Story MOTIR-4669 · MOTIR-4684 — the repository-tenancy surface. Each
+        // MEASURED on this branch before being pinned below, per the note above:
+        // statements 96.61 / branches 85.56 / functions 100 / lines 98.35 across
+        // the five together, with every remaining arm dispositioned on the card.
+        'lib/services/organizationRepoService.ts',
+        'lib/services/organizationAccessService.ts',
+        'lib/settings/organizationSettingsNav.ts',
+        'lib/mappers/organizationRepoMappers.ts',
+        'lib/projectRepos/roomSections.ts',
         'lib/services/legalAcceptanceService.ts',
         // Story 8.4 · Subtask MOTIR-3698 — the data-subject-request SUBSTRATE
         // (account erasure + personal-data export). All three MEASURED at
@@ -1905,6 +1914,67 @@ export default defineConfig({
         // Story MOTIR-3440 · Subtask MOTIR-3449 — the two arrival primitives,
         // MEASURED at 100/100/100/100 each before being pinned (see `include`).
         'components/ui/PageSkeleton.tsx': {
+          lines: 90,
+          functions: 90,
+          branches: 90,
+          statements: 90,
+        },
+        // ── Story MOTIR-4669 · MOTIR-4684 — the repository-tenancy surface ────
+        // Pinned at the project floor after MEASURING each on this branch. The
+        // branch axis is 75 on the two services rather than 90, and that is a
+        // DISPOSITION rather than a discount — every arm below the line is
+        // DEFENSIVE, and each was read off its PRODUCER:
+        //
+        //   organizationRepoService 125/129 — `translateLinkViolation`'s
+        //     non-array `meta.target` and its non-P2002 rethrow. The producer is
+        //     Prisma: `target` is an array for a composite index (which both of
+        //     this file's unique indexes are), and the rethrow is reached only by
+        //     an error class the `catch` does not claim. Its P2002 arms ARE
+        //     covered, by two real concurrency races in
+        //     `tests/projectRepos/organizationRepoService.test.ts`.
+        //   organizationRepoService 563 — the same helper's second call site, on
+        //     the CONNECT path. Reaching it needs a name collision created
+        //     between that path's pre-check and its insert, by a caller that has
+        //     just performed a provider install. A fixture for it would be a
+        //     fixture nobody can build.
+        //   organizationAccessService 88 — the `?? null` on a membership row that
+        //     is `undefined` rather than absent. The producer is
+        //     `findByOrgAndUserInTx`, which returns `null`, so the branch is
+        //     unreachable through it and exists to keep the coalesce total.
+        //   organizationSettingsNav 234 — `if (!entry.href) return false`. Every
+        //     entry in the registry has an href BY CONSTRUCTION, and the
+        //     route↔registry totality test is what holds that: an entry without
+        //     one would fail there before it could reach this line.
+        //
+        // ⚠️ NONE of these is rule-bearing, and none is silenced with an ignore
+        // directive: a defensive arm that is genuinely unreachable is better left
+        // measurable than annotated, so a future change that MAKES it reachable
+        // shows up as a coverage move rather than passing under a comment.
+        'lib/services/organizationRepoService.ts': {
+          lines: 90,
+          functions: 90,
+          branches: 75,
+          statements: 90,
+        },
+        'lib/services/organizationAccessService.ts': {
+          lines: 90,
+          functions: 90,
+          branches: 75,
+          statements: 90,
+        },
+        'lib/settings/organizationSettingsNav.ts': {
+          lines: 90,
+          functions: 90,
+          branches: 90,
+          statements: 90,
+        },
+        'lib/mappers/organizationRepoMappers.ts': {
+          lines: 90,
+          functions: 90,
+          branches: 90,
+          statements: 90,
+        },
+        'lib/projectRepos/roomSections.ts': {
           lines: 90,
           functions: 90,
           branches: 90,
