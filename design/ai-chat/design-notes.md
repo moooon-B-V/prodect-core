@@ -709,6 +709,525 @@ affordance opens the workspace in the mode for the **current context**:
   — only the public roadmap exists today; that door reuses this launcher when
   1011 lands.)
 
+### ⭐ The STYLE MATRIX — all eleven registered styles, drawn (MOTIR-4742, 2026-09-06)
+
+The paragraph above promises a per-style treatment and names six styles. **The
+registry holds eleven.** This section draws the other five, re-draws the six in
+the mechanism the stylesheet actually uses, and states the hook the app has to
+emit — because none of that existed in a form an implementation could copy
+(MOTIR-4743 is the bug it unblocks).
+
+#### The set is DERIVED, not enumerated
+
+**The eleven rows below ARE the eleven `[data-style]` token blocks in
+`packages/design-system/theme.css`, and that is the definition — not a list
+somebody kept in step.** Re-derive it with:
+
+```sh
+grep -c "^\[data-style=" packages/design-system/theme.css   # 12 matches
+grep    "^\[data-style=" packages/design-system/theme.css   # 11 distinct styles
+```
+
+The count is **12 and the answer is 11**: `[data-style='neumorphism'][data-theme='dark']`
+is a THEME variant of a style already in the set, not a twelfth style. Counting the
+grep is how this section would acquire a phantom row, so the number is written down
+beside the command that produces it. `lib/theme/styles.ts` is the registry the app
+reads; a style present there and absent here is a **defect in this section**, on the
+same closure rule `docs/styles/3d-immersive.md` §4b states for the plane ladder.
+
+#### ⚠️ What already reaches these controls — measured, not assumed
+
+Rendered headlessly from the real `theme.css` against the SHIPPED
+`PlanWithAILauncher` and `PlanWithAIFab` (design-against-shipped-reality), the
+current state is **not** "the style axis does not reach the hero". It is narrower
+and more useful than that:
+
+| axis                            | reaches the hero today? | evidence                                                                                                                                                                            |
+| ------------------------------- | ----------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Radius**                      | ✅ **yes**              | `--radius-badge` resolves to `9999px` · `2px` (Swiss) · `0` (Brutalism) · `2px` (Cybercore) · the wonky `9px 26px 11px 22px / 22px 11px 24px 9px` (Hand-Drawn)                      |
+| **Padding**                     | ✅ **yes**              | `--spacing-btn-x` resolves to `16px` · `18px` · `20px` · `22px` across the eleven                                                                                                   |
+| **Height**                      | ✅ yes (uniform)        | `--height-btn-md` is `40px` in all eleven — the token flows; the styles simply agree                                                                                                |
+| **Shadow**                      | ⚠️ **one style only**   | `--plan-hero-shadow` / `--plan-orb-shadow` are set by `3d-immersive` alone (`theme.css:1688-1701`, MOTIR-3522). Every other style falls through to the component's literal fallback |
+| **Fill · border · glow · type** | ❌ **no**               | byte-identical in all eleven — the inline `background-image` beats every rule, and there is no hook to write one against                                                            |
+
+So the rows below change **fill, border, shadow/glow, type and ink**. They do
+**not** re-declare radius, padding or height: those already flow, and a rule that
+re-stated them would freeze the one axis that is working.
+
+#### ⚠️ The HOOK — and why ONE attribute is not enough
+
+The prescription above is `[data-style='id'] [data-surface='ai-cta']`. **No element
+in `app/` or `components/` emits `data-surface="ai-cta"`** — the string occurs
+nowhere outside `design/`. Emitting it is MOTIR-4743's first job, and it emits
+**two** attributes, not one:
+
+```html
+<!-- components/planning/PlanWithAILauncher.tsx — the header pill -->
+<a data-surface="ai-cta" data-ai-cta="pill" data-depth="key" …>
+  <!-- components/planning/PlanWithAIFab.tsx — the floating M orb -->
+  <button data-surface="ai-cta" data-ai-cta="orb" data-depth="key" …></button
+></a>
+```
+
+**The second attribute is load-bearing and is a finding, not a convenience.** The
+two controls do not share a fill RECIPE: the pill is a 135° linear gradient, and the
+orb is a _lit sphere_ — `radial-gradient(circle at 33% 27%, …)` whose first stop is
+`--orb-lit-mix`, a **guarded contrast knob** (MOTIR-3207; `tests/theme/orb-glyph-contrast.test.ts`
+re-derives all twenty palette × theme contexts against a 3:1 floor). A per-style rule
+written against `[data-surface='ai-cta']` alone would set one `background-image` over
+both and **silently overwrite the orb's measured recipe** — turning a guarded 3.78:1
+into whatever the style's pill gradient happens to give. So every fill below is
+written under `[data-ai-cta='pill']` or `[data-ai-cta='orb']`, and only the
+shape-agnostic properties (border, outer glow, type, ink) are written on the shared
+`[data-surface='ai-cta']`.
+
+`data-depth="key"` already ships on both (MOTIR-3522 / §4a) and is **not** replaced by
+this hook: it declares the 3D plane, `data-ai-cta` declares which hero control this is.
+
+#### ⚠️ How the ORB takes each style (AC 5 — "the same way" is not self-evident)
+
+The orb is a circle, the pill a pill, so "the orb adopts each style's material the
+same way" needs a rule rather than a promise. It is this:
+
+1. **The lit-sphere fill is NEVER replaced — it is COMPOSED OVER.** Each style adds
+   its material as an extra `background-image` layer _above_ the shipped radial
+   gradient (a sheen, a grid, a bevel), or changes nothing at all. The shipped
+   radial stays the last layer, so `--orb-lit-mix` keeps deciding the glyph's
+   contrast under every style.
+   **⚠️ AND THE ADDED LAYER IS CONFINED TO THE CROWN** — `background-size: 100% 20–26%`,
+   above the centred 26/56 glyph box. Composing a LIGHT layer over the sphere breaks the
+   guarded floor just as surely as replacing the fill does: measured across the whole
+   circle, glassmorphism's sheen and retrofuturism's crown put the glyph box at 3.17:1 /
+   2.67:1 and 3.34:1 / 2.78:1, under the 3:1 bar
+   `tests/theme/orb-glyph-contrast.test.ts` enforces. Confined, both measure the shipped
+   3.78:1 / 3.10:1 — the sheen is a rim treatment, not a wash (finding C below).
+2. **Radius is not a style axis for the orb.** It is `rounded-full` by definition;
+   a style that squares the pill (Swiss, Brutalism, Cybercore) leaves the orb round.
+   The orb carries that style's _border, shadow/glow and material_ instead — which
+   is precisely what makes the two read as one family at two shapes.
+3. **Anything the pill expresses as TYPE, the orb expresses as GLYPH WEIGHT** — the
+   orb has no label. Uppercase/mono/letter-spacing rows below therefore say
+   "n/a (glyph)" for the orb.
+
+#### The eleven rows
+
+Colour is `color-mix()` over `--el-accent` / `--el-highlight` / `--el-accent-text`
+throughout; **no row names a raw hex**. Cybercore and Retrofuturism additionally mix
+toward the achromatic `white` / `black` KEYWORDS — sanctioned by those styles' own
+material layers, which use them to read as _lightness_ rather than as a hue, so the
+palette axis stays disjoint (`theme.css`, the retrofuturism block's header). Shape is `--radius-badge` /
+`--height-btn-md` / `--spacing-btn-x`, already flowing (table above). Ink is
+`--el-accent-text` in every row — the styles change the GROUND, never the ink, which
+is what keeps the AA argument one-dimensional.
+
+**AA is measured, not asserted.** Every ratio below was computed by resolving the
+tokens through a real CSS engine and reading the PAINTED pixel, then applying WCAG
+2.x — never from the token names. Default `motir` palette; the label is
+`--el-accent-text` (`#ffffff`) over the **accent-dominant** region of that style's own
+fill. The method reproduces the shipped orb figures exactly (3.78:1 light / 3.10:1
+dark against `design-notes.md` § B's recorded 3.77 / 3.09), which is what makes the
+new numbers trustworthy.
+
+| #   | Style                     | Fill (pill)                                                                                                              | Border                                                                                            | Shadow / glow                                                                                                    | Type                                    | Label AA — light / dark |
+| --- | ------------------------- | ------------------------------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------- | --------------------------------------- | ----------------------- |
+| 1   | **Warm Editorial** (base) | 135° `--el-accent` → `color-mix(--el-accent 86%, --el-highlight)` — **accent-dominant, see the base-fill finding below** | none                                                                                              | inner sheen + violet drop + pink aura (the component's own `var()` fallback)                                     | sans, 600, sentence case                | **5.97** / **4.64**     |
+| 2   | **Soft / Playful**        | as base                                                                                                                  | none                                                                                              | **pillowy stack**: a hard `0 7px 0 -1px` ledge in `color-mix(--el-accent 22%, --el-page-bg)` + a wide soft bloom | sans, **800**, sentence case            | **5.97** / **4.64**     |
+| 3   | **Swiss / Minimal-Flat**  | **flat solid `--el-accent`** — no gradient                                                                               | none                                                                                              | **none** (the style removes every shadow; depth is hairline + whitespace)                                        | sans, 700, **UPPERCASE**, `0.07em`      | **6.57** / **4.99**     |
+| 4   | **Glassmorphism**         | **frosted**: `color-mix(--el-accent 86%, transparent)` + `backdrop-filter: blur(var(--glass-blur))`                      | `1px` `var(--glass-rim)`                                                                          | inner rim sheen + diffuse lift                                                                                   | sans, 600, sentence case                | **4.87** / **5.73**     |
+| 5   | **Neo-Brutalism**         | **flat solid `--el-accent`**                                                                                             | **2px solid `--el-text`**                                                                         | **hard offset, zero blur** — `4px 4px 0 var(--el-text)`                                                          | sans, 800, **UPPERCASE**                | **6.57** / **4.99**     |
+| 6   | **Cybercore / Y2K**       | dark HUD ground: `color-mix(--el-accent 88%, black)` → the highlight mix taken 78% to black                              | `1px` `color-mix(--el-highlight 70%, transparent)`                                                | **neon halo, no drop shadow**: `0 0 10px` / `0 0 26px -4px` over `--el-highlight` / `--el-accent`                | **mono** (`--font-mono`), 600, `0.04em` | **7.42** / **6.10**     |
+| 7   | **Aurora**                | base + a lit-from-within crown sheen at `--aurora-sheen`                                                                 | none                                                                                              | **colour halo** at `--aurora-glow`, no hard shadow                                                               | sans, 600, sentence case                | **5.97** / **4.64**     |
+| 8   | **3D / Immersive**        | as base — **unchanged**                                                                                                  | none                                                                                              | ⚠️ **NOT SET HERE** — the shipped `--plan-hero-shadow` / `--plan-orb-shadow` own it (see below)                  | sans, 600, sentence case                | **5.97** / **4.64**     |
+| 9   | **Hand-Drawn / Indie**    | as base                                                                                                                  | **2px `--el-border-strong`**, warped by the shared `#hd-rough` filter on a content-safe `::after` | soft hand-placed offset, `3px 4px 0 -1px color-mix(--el-border-strong 55%, transparent)`                         | sans, 700, sentence case                | **5.97** / **4.64**     |
+| 10  | **Neumorphism**           | **flat solid `--el-accent` — no gradient, no glow**                                                                      | hairline `1px color-mix(--el-accent 70%, var(--el-text))` (KEPT, never removed)                   | **paired extrusion**: `--neu-distance` / `--neu-blur` with `--neu-light` up-left and `--neu-shadow` down-right   | sans, 600, sentence case                | **6.57** / **4.99**     |
+| 11  | **Retrofuturism**         | **chrome bevel** (vertical `+18% white` → `--el-accent` at 20% → `+16% black`) + a **crown-confined** specular streak    | `1px color-mix(--el-accent-text 30%, transparent)`                                                | colour glow at `--retro-glow` + the bevel's inner top highlight                                                  | sans, 600, sentence case                | **6.76** / **5.16**     |
+
+**Every row clears WCAG AA for normal text (4.5:1) in both themes**, and every orb glyph clears the
+3:1 non-text floor `--orb-lit-mix` was tuned to hold. The tightest label is **Glassmorphism at
+4.87:1 (light)**; the tightest orb is **3.10:1 (dark)**, which is the shipped orb's own figure —
+no style moves it, by construction.
+
+|                                                          | pill light | pill dark | orb light | orb dark |
+| -------------------------------------------------------- | ---------- | --------- | --------- | -------- |
+| Warm Editorial · Soft/Playful · Aurora · 3D · Hand-Drawn | 5.97       | 4.64      | 3.79      | 3.10     |
+| Swiss · Neo-Brutalism                                    | 6.57       | 4.99      | 3.79      | 3.10     |
+| Glassmorphism                                            | 4.87       | 5.73      | 3.78      | 3.10     |
+| Cybercore / Y2K                                          | 7.42       | 6.10      | 3.72      | 3.11     |
+| Neumorphism                                              | 6.57       | 4.99      | 6.57      | 4.99     |
+| Retrofuturism                                            | 6.76       | 5.16      | 3.78      | 3.10     |
+
+#### ⚠️ FOUR places the measurement changed the design
+
+This is why AC 6 asks for numbers rather than a claim. Every one of these was invisible to reading
+the CSS and to looking at the render; each was found by sampling the painted pixel.
+
+**A · The BASE fill fails AA in dark today — and it is a shipped defect, not a new one.**
+`PlanWithAILauncher.HERO_STYLE` paints
+`linear-gradient(135deg, var(--el-accent), color-mix(in srgb, var(--el-accent) 55%, var(--el-highlight)))`.
+The label spans the whole pill, so it also sits on the FAR stop — which is 45% brand pink. Measured
+over the worst pixel under the glyphs: **4.64:1 light and 3.98:1 dark**. The dark figure is below
+the 4.5:1 bar, on the product's headline control, today, on `main`.
+It also contradicts this very file, which says _"the brand pink lives only in the glow/aura, never
+under text"_ — true of the aura, false of the fill's second stop.
+**The remedy is one number and it restores the sentence rather than rewriting it**: the far stop
+becomes `color-mix(--el-accent 86%, --el-highlight)` — **5.97:1 / 4.64:1** — so the fill is
+accent-dominant and the pink stays in the glow, exactly as promised. Sweeping the mix shows 80% is
+the first passing value (4.55:1 dark); **86% is specified rather than 80% so the bar is cleared with
+margin rather than met**. This is picked up by [MOTIR-4743](motir:cmtplxqtd0078hvn8s6fzv4wa), which
+rewrites that declaration anyway to move the fill off the inline `style` prop — the two are one edit,
+which is why this is recorded here and on that card rather than filed as a third.
+
+**B · Retrofuturism's SPECULAR STREAK was the failure, not the bevel.** The first draft of this
+section blamed the bevel highlight and bounded it; the render then measured **2.55:1 light / 2.22:1
+dark**, because the diagonal streak at `--retro-spec` (44% white) crosses the label across the full
+box. **Thinning it does not rescue it** — at 18% it still measures 3.67:1 in dark, and by then the
+chrome has stopped reading. So the streak becomes a **crown** highlight: its own background layer at
+`background-size: 100% 28%`, above the cap height. The label sits on the bevel body at **6.76:1 /
+5.16:1**, and the chrome still reads, because a machined bevel IS a vertical light-to-dark ramp with
+a highlight on the crown. _(The bevel was never the problem; a plausible diagnosis measured wrong.)_
+
+**C · A style sheen over the ORB silently breaks the guarded contrast knob.** The rule above says a
+style composes OVER the lit-sphere fill rather than replacing it — and composing a LIGHT layer over
+it is the same failure by another route. Glassmorphism's `--glass-sheen` and Retrofuturism's crown,
+applied across the whole circle, measured **3.17:1 / 2.67:1** and **3.34:1 / 2.78:1** inside the
+26/56 glyph box: under the 3:1 floor `tests/theme/orb-glyph-contrast.test.ts` enforces, from a
+design that had just written down the rule it was breaking. **So the rule has a second clause: an orb
+material layer is confined to the CROWN** (`background-size: 100% 20–26%`), above the glyph box,
+which is why both now measure the shipped 3.78:1 / 3.10:1 — identical to no sheen at all, because
+the glyph box never sees it.
+
+**D · Glassmorphism cannot be as frosted as this sheet used to draw it.** The retired `.hc-glass`
+painted `rgba(255,255,255,0.18)` — a _white_ veil — over a vibrant stage. Measured against the light
+page that is **2.31:1** at a 50% accent share and **4.49:1** at 82%: below the bar, and the second
+only just, which is exactly the value a designer would accept by eye. The frost is specified as
+**`color-mix(in srgb, var(--el-accent) 86%, transparent)`** — still genuinely translucent, with the
+glass read carried by the blur + `--glass-rim` + the inner sheen rather than by thinning the fill.
+**86% is a floor, not a preference**: white is the lightest backdrop the light theme can put behind
+it (`--el-page-bg` is `#ffffff`), so 86% accent composited over anything is **≥ 4.87:1**.
+
+#### ⚠️ Row 8 reconciled — `3d-immersive` ADDS NOTHING to the shadow (AC 4)
+
+`3d-immersive` is the one style that already treats this control, and the rule below
+is written to **compose with** that rather than replace it.
+
+`PlanWithAILauncher.HERO_STYLE` and `PlanWithAIFab.ORB_STYLE` paint `box-shadow`
+**inline**, which beats every stylesheet rule — so MOTIR-3522 made each read
+`var(--plan-hero-shadow, <the base look>)` / `var(--plan-orb-shadow, …)`, and
+`theme.css:1688-1701` sets those two variables for this style **on `body` inside the
+`@scope`**, adding the physical key's base edge (`0 4px 0 0 var(--el-accent-pressed)`,
+`0 5px 0 0` for the orb).
+
+**Therefore the `3d-immersive` rule in this section sets NO `box-shadow` and NO
+`background-image`.** Two reasons, and both are rules rather than taste:
+
+1. A `box-shadow` here would lose to the inline declaration anyway — that is the
+   whole reason the variable seam exists. The correct place to change this style's
+   hero depth is the existing `--plan-hero-shadow` / `--plan-orb-shadow` block.
+2. `docs/styles/3d-immersive.md` §4 classifies a hero CTA as a **physical key**
+   (_"An interactive pill that is an ACTION rather than a status … is a key and says
+   so with `data-depth='key'`"_), and §4b's CLOSURE RULE makes an unclassified
+   surface a spec defect. Both controls already carry `data-depth="key"`. Replacing
+   the key's base edge with a decorative fill would take the control OFF the plane
+   ladder while leaving it declared on it — a contradiction, not a restyle.
+
+So row 8 is deliberately the base fill: under `3d-immersive` the hero's _identity_
+is its depth, and the depth already ships.
+
+#### The CSS, verbatim — copyable into `theme.css` (AC 3)
+
+Paste as-is. It follows the file's own `@scope` house form (the same one the
+glassmorphism, aurora, neumorphism and retrofuturism material layers use), reads
+only `--el-*` and the styles' own palette-agnostic scalars, and names no raw hex.
+It belongs **after** each style's token block, with the other material-layer rules —
+**never inside a bare `[data-style]` token block**, which `tests/theme/styleRegistry.test.ts`
+holds colour-free and `tests/theme/shapeSwapLint.test.ts` requires to override every
+shape role.
+
+```css
+/* ── The hero AI control, per style (MOTIR-4742) ──────────────────────────
+   The two controls that summon the planning workspace — the header pill
+   (`PlanWithAILauncher`) and the floating M orb (`PlanWithAIFab`) — are the
+   product's headline affordance and the sanctioned exception to the flat-button
+   norm. Each style gives them its own material.
+
+   `data-ai-cta` distinguishes the two because they do not share a fill recipe:
+   the orb's `radial-gradient` first stop is `--orb-lit-mix`, a guarded contrast
+   knob (MOTIR-3207), and a shared `background-image` would overwrite it. Radius,
+   padding and height are NOT set here — they already flow through
+   `--radius-badge` / `--spacing-btn-x` / `--height-btn-md`. Palette-derived
+   throughout; the colour axis stays disjoint. */
+
+/* 2 · Soft / Playful — pillowy stacked shadow, no border. */
+@scope ([data-style='soft-playful']) to ([data-style]) {
+  [data-surface='ai-cta'] {
+    font-weight: 800;
+    box-shadow:
+      0 7px 0 -1px color-mix(in srgb, var(--el-accent) 22%, var(--el-page-bg)),
+      0 14px 22px -6px color-mix(in srgb, var(--el-accent) 55%, transparent);
+  }
+}
+
+/* 3 · Swiss / Minimal-Flat — flat solid, sharp, uppercase, NO shadow. */
+@scope ([data-style='swiss-minimal-flat']) to ([data-style]) {
+  [data-surface='ai-cta'] {
+    box-shadow: none;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.07em;
+  }
+  [data-surface='ai-cta'][data-ai-cta='pill'] {
+    background-image: none;
+    background-color: var(--el-accent);
+  }
+}
+
+/* 4 · Glassmorphism — frosted translucency over the rim. 86% is a FLOOR. */
+@scope ([data-style='glassmorphism']) to ([data-style]) {
+  [data-surface='ai-cta'] {
+    border: 1px solid var(--glass-rim);
+    -webkit-backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-saturate));
+    backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-saturate));
+    box-shadow:
+      inset 0 1px 0 var(--glass-rim),
+      0 8px 22px -6px color-mix(in srgb, var(--el-accent) 45%, transparent);
+  }
+  [data-surface='ai-cta'][data-ai-cta='pill'] {
+    background-image: none;
+    background-color: color-mix(in srgb, var(--el-accent) 86%, transparent);
+  }
+  [data-surface='ai-cta'][data-ai-cta='orb'] {
+    /* Crown-confined: across the whole circle this sheen lightens the
+       26/56 glyph box to 3.17:1 light / 2.67:1 dark and breaks the
+       `--orb-lit-mix` floor the style layer may not touch. */
+    background-size:
+      100% 20%,
+      100% 100%;
+    background-position:
+      top left,
+      top left;
+    background-repeat: no-repeat;
+    background-image:
+      linear-gradient(160deg, var(--glass-sheen), transparent 90%),
+      radial-gradient(
+        circle at 33% 27%,
+        color-mix(in srgb, var(--el-accent-text) var(--orb-lit-mix), var(--el-accent)),
+        var(--el-accent) 56%,
+        color-mix(in srgb, var(--el-accent) 68%, var(--el-highlight))
+      );
+  }
+}
+
+/* 5 · Neo-Brutalism — hard 2px border + zero-blur offset shadow. */
+@scope ([data-style='neo-brutalism']) to ([data-style]) {
+  [data-surface='ai-cta'] {
+    border: 2px solid var(--el-text);
+    box-shadow: 4px 4px 0 0 var(--el-text);
+    font-weight: 800;
+    text-transform: uppercase;
+  }
+  [data-surface='ai-cta'][data-ai-cta='pill'] {
+    background-image: none;
+    background-color: var(--el-accent);
+  }
+}
+
+/* 6 · Cybercore / Y2K — dark HUD ground, neon halo, mono label. */
+@scope ([data-style='cybercore-y2k']) to ([data-style]) {
+  [data-surface='ai-cta'] {
+    border: 1px solid color-mix(in srgb, var(--el-highlight) 70%, transparent);
+    box-shadow:
+      0 0 10px color-mix(in srgb, var(--el-highlight) 60%, transparent),
+      0 0 26px -4px color-mix(in srgb, var(--el-accent) 70%, transparent);
+    font-family: var(--font-mono);
+    letter-spacing: 0.04em;
+  }
+  [data-surface='ai-cta'][data-ai-cta='pill'] {
+    background-image: linear-gradient(
+      135deg,
+      color-mix(in srgb, var(--el-accent) 88%, black),
+      color-mix(in srgb, color-mix(in srgb, var(--el-accent) 70%, var(--el-highlight)) 78%, black)
+    );
+  }
+  [data-surface='ai-cta'][data-ai-cta='orb'] {
+    background-image:
+      linear-gradient(
+        160deg,
+        color-mix(in srgb, var(--el-highlight) 22%, transparent),
+        transparent 55%
+      ),
+      radial-gradient(
+        circle at 33% 27%,
+        color-mix(in srgb, var(--el-accent-text) var(--orb-lit-mix), var(--el-accent)),
+        var(--el-accent) 56%,
+        color-mix(in srgb, var(--el-accent) 68%, var(--el-highlight))
+      );
+  }
+}
+
+/* 7 · Aurora — lit from within, colour halo, no hard shadow. */
+@scope ([data-style='aurora']) to ([data-style]) {
+  [data-surface='ai-cta'] {
+    box-shadow:
+      inset 0 1px 0 color-mix(in srgb, var(--el-accent-text) var(--aurora-sheen), transparent),
+      0 0 26px -2px color-mix(in srgb, var(--el-accent) var(--aurora-glow), transparent),
+      0 0 40px -6px color-mix(in srgb, var(--el-highlight) var(--aurora-glow), transparent);
+  }
+  [data-surface='ai-cta'][data-ai-cta='pill'] {
+    background-size:
+      100% 28%,
+      100% 100%;
+    background-position:
+      top left,
+      top left;
+    background-repeat: no-repeat;
+    background-image:
+      linear-gradient(
+        180deg,
+        color-mix(in srgb, var(--el-accent-text) var(--aurora-sheen), transparent),
+        transparent 90%
+      ),
+      linear-gradient(
+        135deg,
+        var(--el-accent),
+        color-mix(in srgb, var(--el-accent) 86%, var(--el-highlight))
+      );
+  }
+}
+
+/* 8 · 3D / Immersive — NOTHING. `--plan-hero-shadow` / `--plan-orb-shadow`
+   own this control's depth and the components read them through a `var()`
+   seam an inline `box-shadow` would otherwise beat (MOTIR-3522). A rule
+   here would either lose to that inline declaration or take a
+   `data-depth="key"` control off the plane ladder it is declared on
+   (docs/styles/3d-immersive.md §4 / §4b). Deliberately empty — recorded so
+   the absence reads as a decision, not an omission. */
+
+/* 9 · Hand-Drawn / Indie — a drawn ink outline + a hand-placed offset. */
+@scope ([data-style='hand-drawn-indie']) to ([data-style]) {
+  [data-surface='ai-cta'] {
+    position: relative;
+    font-weight: 700;
+    box-shadow: 3px 4px 0 -1px color-mix(in srgb, var(--el-border-strong) 55%, transparent);
+  }
+  [data-surface='ai-cta']::after {
+    content: '';
+    position: absolute;
+    inset: -1px;
+    pointer-events: none;
+    border: 2px solid var(--el-border-strong);
+    border-radius: inherit;
+    filter: url(#hd-rough);
+  }
+}
+
+/* 10 · Neumorphism — moulded, NOT raised-and-glowing: no gradient, no
+   glow, and the hairline is KEPT (structure never relies on shadow alone). */
+@scope ([data-style='neumorphism']) to ([data-style]) {
+  [data-surface='ai-cta'] {
+    border: 1px solid color-mix(in srgb, var(--el-accent) 70%, var(--el-text));
+    box-shadow:
+      var(--neu-distance) var(--neu-distance) var(--neu-blur) var(--neu-shadow),
+      calc(var(--neu-distance) * -1) calc(var(--neu-distance) * -1) var(--neu-blur) var(--neu-light);
+  }
+  [data-surface='ai-cta'][data-ai-cta='pill'],
+  [data-surface='ai-cta'][data-ai-cta='orb'] {
+    background-image: none;
+    background-color: var(--el-accent);
+  }
+}
+
+/* 11 · Retrofuturism — a chrome bevel + a CROWN-CONFINED specular streak.
+   ⚠️ THE STREAK IS THE THING THAT HAD TO MOVE, not the bevel. Across the
+   full box the diagonal at `--retro-spec` washes the label to 2.55:1 light
+   / 2.22:1 dark, and thinning it does not rescue it (18% still measures
+   3.67:1 dark, by which point the chrome has stopped reading). Sized to
+   the top band it sits above the cap height, the label sits on the bevel
+   BODY at 6.76:1 / 5.16:1, and the chrome still reads — a machined bevel
+   IS a vertical light-to-dark ramp with a highlight on the crown. */
+@scope ([data-style='retrofuturism']) to ([data-style]) {
+  [data-surface='ai-cta'] {
+    border: 1px solid color-mix(in srgb, var(--el-accent-text) 30%, transparent);
+    box-shadow:
+      inset 0 1px 0 color-mix(in srgb, var(--el-accent-text) var(--retro-bevel-light), transparent),
+      0 0 24px -4px color-mix(in srgb, var(--el-accent) var(--retro-glow), transparent);
+  }
+  [data-surface='ai-cta'][data-ai-cta='pill'] {
+    background-image:
+      linear-gradient(
+        104deg,
+        transparent 30%,
+        color-mix(in srgb, var(--el-accent-text) var(--retro-spec), transparent) 46%,
+        transparent 62%
+      ),
+      linear-gradient(
+        180deg,
+        color-mix(in srgb, var(--el-accent) 82%, white) 0%,
+        var(--el-accent) 20%,
+        color-mix(in srgb, var(--el-accent) 84%, black) 100%
+      );
+    /* The specular streak is a CROWN highlight, sized to the top band alone.
+       Across the whole box it washes the label to 2.55:1 light / 2.22:1 dark —
+       and thinning it does not rescue it (18% still measures 3.67:1 in dark).
+       Confined above the cap height the label sits on the bevel BODY, and the
+       chrome still reads, because a machined bevel IS a vertical light-to-dark
+       ramp with a highlight on the crown. */
+    background-size:
+      100% 28%,
+      100% 100%;
+    background-position:
+      top left,
+      top left;
+    background-repeat: no-repeat;
+  }
+  [data-surface='ai-cta'][data-ai-cta='orb'] {
+    /* Crown-confined, for the same reason as glass: unbounded it measures
+       3.34:1 light / 2.78:1 dark inside the glyph box. */
+    background-size:
+      100% 26%,
+      100% 100%;
+    background-position:
+      top left,
+      top left;
+    background-repeat: no-repeat;
+    background-image:
+      linear-gradient(
+        180deg,
+        color-mix(in srgb, var(--el-accent-text) var(--retro-bevel-light), transparent),
+        transparent 90%
+      ),
+      radial-gradient(
+        circle at 33% 27%,
+        color-mix(in srgb, var(--el-accent-text) var(--orb-lit-mix), var(--el-accent)),
+        var(--el-accent) 56%,
+        color-mix(in srgb, var(--el-accent) 68%, var(--el-highlight))
+      );
+  }
+}
+```
+
+**Warm Editorial (row 1) has no block by design** — it is the Tier-0 base, and the
+components' own `var()` fallbacks ARE its treatment. A block repeating them would be
+a second copy to drift. **Its FILL still changes, and not here:** finding A moves the
+base gradient's far stop to `86%`, which is an edit to
+`PlanWithAILauncher.HERO_STYLE` itself, not a `[data-style]` rule. Ten styles inherit
+that stop, so it is the one value in this section that is not optional for any of
+them.
+
+#### What this section does NOT decide
+
+- **It does not emit the hook.** `data-surface` / `data-ai-cta` on the two
+  components, and moving the fill off the inline `style` prop so a rule can reach it,
+  are MOTIR-4743's work. This section is the specification that card copies.
+- **It does not change `--orb-lit-mix`, `--plan-hero-shadow` or `--plan-orb-shadow`.**
+  All three ship and all three are read, not rewritten.
+- **It DOES change the base gradient's far stop** (finding A), because leaving it would
+  ship ten of the eleven rows below the AA bar in dark. That edit is a component change
+  and belongs to [MOTIR-4743](motir:cmtplxqtd0078hvn8s6fzv4wa) with the rest of the fill
+  work — recorded here, and on that card, so the card that rewrites the declaration
+  cannot rewrite it back to `55%`.
+- **It does not touch the shimmer or the pulse.** Both are `globals.css` animations
+  already gated behind `prefers-reduced-motion`, and neither is style-axis work.
+
 ### ⚠️ Opening & exiting — a full-screen overlay ON TOP of the app (sheet 6)
 
 > **⚠️ AMENDED 2026-09-06 — MOTIR-4726, under story [MOTIR-4725](motir:cmtpk3r2z0096hvn8v7lav9wi).**
