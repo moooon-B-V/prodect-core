@@ -6104,7 +6104,9 @@
       },
       "installLink": "Install the Motir GitHub App",
       "cta": "Connect GitHub",
-      "foot": "You'll be sent to GitHub to authorize, then to pick repositories."
+      "foot": "You'll be sent to GitHub to authorize, then to pick repositories.",
+      "noInstallHref": "Installing the Motir GitHub App isn’t available on this deployment.",
+      "orgFoot": "You’ll be sent to GitHub to choose which repositories this organisation grants Motir."
     },
     "identity": {
       "connectedAs": "GitHub identity · connected as {name}",
@@ -6217,7 +6219,8 @@
       "connectedBy": "Installed by @{login} on {date}",
       "notConnected": "{org} is not connected to a git host yet.",
       "adminOnly": "Only owners and admins of {org} can connect or disconnect a git host.",
-      "subtitleGeneric": "Connect your organisation to GitHub or GitLab once. Every project in the organisation can then work on a connected repository — picking one never indexes it again."
+      "subtitleGeneric": "Connect your organisation to GitHub or GitLab once. Every project in the organisation can then work on a connected repository — picking one never indexes it again.",
+      "identityAtAccount": "Connect your own account in Settings → Account → Git accounts"
     }
   },
   "aiPlanning": {

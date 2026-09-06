@@ -17,6 +17,12 @@ import { EmptyState } from '@/components/ui/EmptyState';
 import { GithubMark } from '@/components/icons/GithubMark';
 import { GitConnectBanner } from '@/components/settings/GitConnectBanner';
 import { GitSettingsShell } from '../../workspace/_components/GitSettingsShell';
+import { GrantRow } from '../../workspace/_components/gitSettingsPrimitives';
+import { githubAppInstallUrl } from '@/lib/github/appLinks';
+import { encodeInstallState } from '@/lib/github/installState';
+import { buttonVariants } from '@/components/ui/Button';
+import { BadgeCheck, ExternalLink, FolderGit2 } from 'lucide-react';
+import { GitlabConnection } from './_components/GitlabConnection';
 import { OrgGitClient } from './_components/OrgGitClient';
 
 // SETTINGS → ORGANISATION → GIT (Story MOTIR-4669 · MOTIR-4680), built to
@@ -46,7 +52,7 @@ import { OrgGitClient } from './_components/OrgGitClient';
 // provably is not). A disconnect does both.
 
 interface OrgGitPageProps {
-  searchParams: Promise<{ provider?: string; github?: string }>;
+  searchParams: Promise<{ provider?: string; github?: string; gitlab?: string }>;
 }
 
 export default async function OrganizationGitPage({ searchParams }: OrgGitPageProps) {
@@ -86,9 +92,14 @@ export default async function OrganizationGitPage({ searchParams }: OrgGitPagePr
       {/* ABOVE the boundary: the banner is about the round trip the reader just
           took, needs none of the reads, and a confirmation that waits for a
           database arrives after the reader has started wondering. */}
-      <GitConnectBanner status={sp.github} />
+      <GitConnectBanner status={sp.github} gitlabStatus={sp.gitlab} />
       <Suspense fallback={<SettingsPaneFrame />}>
-        <OrgGitBody userId={ctx.userId} workspaceId={ctx.workspaceId} github={sp.github} />
+        <OrgGitBody
+          userId={ctx.userId}
+          workspaceId={ctx.workspaceId}
+          provider={provider}
+          github={sp.github}
+        />
       </Suspense>
     </GitSettingsShell>
   );
@@ -98,9 +109,11 @@ export default async function OrganizationGitPage({ searchParams }: OrgGitPagePr
 async function OrgGitBody({
   userId,
   workspaceId,
+  provider,
 }: {
   userId: string;
   workspaceId: string;
+  provider: 'github' | 'gitlab';
   github?: string | undefined;
 }) {
   const t = await getTranslations('github');
@@ -119,6 +132,26 @@ async function OrgGitBody({
     organizationRepoService.listInventory(ctx),
   ]);
   const organizationName = organization?.organization.name ?? '';
+
+  // ⚠️ THE GITLAB ARM IS A DIFFERENT CONNECTION, NOT A DIFFERENT SKIN. One OAuth
+  // authorization conveys identity and project access, and selection happens in
+  // app — so the provider Segmented swaps the whole card, and only the inventory
+  // below is shared. Rendering GitHub's card under `?provider=gitlab` is what
+  // shipped first, and it left a workspace with no way to connect GitLab at all.
+  if (provider === 'gitlab') {
+    return (
+      <>
+        <GitlabConnection userId={ctx.userId} workspaceId={ctx.workspaceId} />
+        <OrgGitClient
+          initialRows={rows}
+          organizationName={organizationName}
+          canDisconnect={canDisconnect}
+          manageOnGithubHref={null}
+          retentionDays={CODE_GRAPH_RETENTION_WINDOW_DAYS}
+        />
+      </>
+    );
+  }
 
   return (
     <>
@@ -153,9 +186,12 @@ async function OrgGitBody({
             </div>
           </div>
         ) : (
-          <p className="font-sans text-sm text-(--el-text-secondary)">
-            {t('organization.notConnected', { org: organizationName })}
-          </p>
+          <GithubConnectPanel
+            organizationName={organizationName}
+            installUrl={githubAppInstallUrl(
+              encodeInstallState({ workspaceId: ctx.workspaceId, userId: ctx.userId }),
+            )}
+          />
         )}
       </Card>
 
@@ -175,6 +211,86 @@ async function OrgGitBody({
         retentionDays={CODE_GRAPH_RETENTION_WINDOW_DAYS}
       />
     </>
+  );
+}
+
+/**
+ * THE ORGANISATION'S GITHUB GRANT, when it has none yet.
+ *
+ * ⚠️ THIS DOOR WAS MISSING, and `tests/e2e/github.spec.ts` is what said so. The
+ * tier move deleted `/settings/workspace/github`, whose not-connected panel was
+ * the only place the Motir App could be installed from; this page shipped with a
+ * sentence saying the organisation was not connected and no way to connect it.
+ * A settings page that names a state it cannot leave is worse than no page.
+ *
+ * ⚠️ THE TWO STEPS ARE AT TWO TIERS NOW, and saying so is the whole content of
+ * this card. Step 1 is the MEMBER's own identity and lives at Settings → Account
+ * → Git accounts (MOTIR-4682) — nobody can connect it on somebody else's behalf,
+ * so this page links to it rather than offering it. Step 2 is the
+ * ORGANISATION's grant, which is the App installation, and that is the primary
+ * action here. The old workspace page put both on one screen because it did not
+ * distinguish the tiers; that conflation is the thing this story removed.
+ */
+async function GithubConnectPanel({
+  organizationName,
+  installUrl,
+}: {
+  organizationName: string;
+  installUrl: string | null;
+}) {
+  const t = await getTranslations('github');
+  return (
+    <div className="flex flex-col gap-5">
+      <div className="flex flex-col gap-1">
+        <h2 className="font-sans text-base font-semibold text-(--el-text)">{t('connect.title')}</h2>
+        <p className="font-sans text-sm text-(--el-text-muted)">
+          {t('organization.notConnected', { org: organizationName })}
+        </p>
+      </div>
+
+      <GrantRow
+        icon={<BadgeCheck aria-hidden />}
+        eyebrow={t('connect.step1.eyebrow')}
+        title={t('connect.step1.title')}
+        body={t('connect.step1.body')}
+        extra={
+          <a
+            href="/settings/account/git"
+            className="inline-flex w-fit items-center gap-1.5 font-sans text-sm font-medium text-(--el-link) hover:text-(--el-link-pressed)"
+          >
+            {t('organization.identityAtAccount')}
+          </a>
+        }
+      />
+      <div role="separator" className="border-t border-(--el-border-soft)" />
+      <GrantRow
+        icon={<FolderGit2 aria-hidden />}
+        eyebrow={t('connect.step2.eyebrow')}
+        title={t('connect.step2.title')}
+        body={t('connect.step2.body')}
+      />
+
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <p className="font-sans text-sm text-(--el-text-muted)">{t('connect.orgFoot')}</p>
+        {installUrl ? (
+          <a
+            href={installUrl}
+            target="_blank"
+            rel="noreferrer noopener"
+            className={buttonVariants({ variant: 'primary' })}
+          >
+            <GithubMark className="h-4 w-4" aria-hidden />
+            {t('connect.installLink')}
+            <ExternalLink className="h-3.5 w-3.5" aria-hidden />
+          </a>
+        ) : (
+          /* No App slug configured — a self-hosted deployment that registered
+             none. The button would link nowhere, so it is absent and the reason
+             is stated. */
+          <p className="font-sans text-sm text-(--el-text-muted)">{t('connect.noInstallHref')}</p>
+        )}
+      </div>
+    </div>
   );
 }
 

@@ -56,10 +56,23 @@ export const GITHUB_RETURN_SURFACES = {
 
 export type GithubReturnSurfaceId = keyof typeof GITHUB_RETURN_SURFACES;
 
-/** Where a flow lands when it carries no origin, or one we do not recognise.
- *  This is exactly the path both routes hard-coded before MOTIR-4676, so an
- *  in-flight round trip that started before the deploy is unchanged. */
-export const DEFAULT_RETURN_PATH = GITHUB_RETURN_SURFACES.workspaceGithub;
+/**
+ * Where a flow lands when it carries no origin, or one we do not recognise.
+ *
+ * ⚠️ IT MOVED WITH THE SURFACE (MOTIR-4680). It was `workspaceGithub` — the path
+ * both routes hard-coded before MOTIR-4676 — and that route is now DELETED and
+ * answered by a permanent redirect to exactly this path. Leaving the default
+ * there would still work, through the redirect, and would be a default that
+ * points at a route the app no longer serves: the next reader could not tell
+ * whether that was compatibility or an oversight, and the extra hop is paid by
+ * every flow that carries no origin, which is every one that started before
+ * MOTIR-4676 shipped.
+ *
+ * `workspaceGithub` and `workspaceGitlab` stay in the map above for exactly the
+ * case the old default was written for — an in-flight round trip whose envelope
+ * already names one — and they resolve through the redirect, unchanged.
+ */
+export const DEFAULT_RETURN_PATH = GITHUB_RETURN_SURFACES.organizationGit;
 
 const SURFACE_IDS = new Set<string>(Object.keys(GITHUB_RETURN_SURFACES));
 

@@ -6100,7 +6100,9 @@
       },
       "installLink": "安装 Motir GitHub App",
       "cta": "连接 GitHub",
-      "foot": "你将被带到 GitHub 进行授权，然后选择仓库。"
+      "foot": "你将被带到 GitHub 进行授权，然后选择仓库。",
+      "noInstallHref": "此部署不支持安装 Motir GitHub App。",
+      "orgFoot": "你将前往 GitHub，选择本组织授予 Motir 的仓库。"
     },
     "identity": {
       "connectedAs": "GitHub 身份 · 已连接为 {name}",
@@ -6213,7 +6215,8 @@
       "connectedBy": "由 @{login} 于 {date} 安装",
       "notConnected": "{org} 尚未连接任何 Git 平台。",
       "adminOnly": "只有 {org} 的所有者和管理员可以连接或断开 Git 平台。",
-      "subtitleGeneric": "将你的组织与 GitHub 或 GitLab 连接一次。此后组织中的任何项目都可以使用已连接的仓库——挑选它们不会重新建立索引。"
+      "subtitleGeneric": "将你的组织与 GitHub 或 GitLab 连接一次。此后组织中的任何项目都可以使用已连接的仓库——挑选它们不会重新建立索引。",
+      "identityAtAccount": "在「设置 → 账户 → Git 账户」中连接你自己的账户"
     }
   },
   "aiPlanning": {

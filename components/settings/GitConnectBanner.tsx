@@ -1,5 +1,6 @@
 import { getTranslations } from 'next-intl/server';
 import { GITHUB_BANNER_TONE, type GithubBannerStatus } from '@/lib/github/bannerStatus';
+import { GITLAB_BANNER_TONE, type GitlabBannerStatus } from '@/lib/gitlab/bannerStatus';
 import { SettingsBanner } from '@/app/(authed)/settings/workspace/_components/gitSettingsPrimitives';
 
 // THE `?github=<status>` BANNER, ON WHICHEVER SURFACE THE FLOW RETURNED TO
@@ -25,15 +26,41 @@ import { SettingsBanner } from '@/app/(authed)/settings/workspace/_components/gi
 export interface GitConnectBannerProps {
   /** The raw `?github=` search param — unvalidated, straight off the URL. */
   status: string | undefined;
+  /**
+   * The raw `?gitlab=` search param. ⚠️ ONE COMPONENT, TWO PROVIDERS (MOTIR-4680):
+   * both flows now return to the same route, so a second banner component would
+   * be the restated map this file exists to prevent — one tier down. The two
+   * statuses share a tone map and differ only in which `<provider>.banner.*`
+   * namespace the copy comes from.
+   *
+   * Both cannot be set at once by any flow we mint; if a hand-typed URL carries
+   * both, GitHub's wins and GitLab's is dropped, because two stacked banners
+   * about one round trip is worse than the wrong one of two.
+   */
+  gitlabStatus?: string | undefined;
 }
 
-export async function GitConnectBanner({ status }: GitConnectBannerProps) {
-  const tone =
-    status && status in GITHUB_BANNER_TONE
-      ? GITHUB_BANNER_TONE[status as GithubBannerStatus]
-      : undefined;
-  if (!tone) return null;
-
-  const t = await getTranslations('github');
-  return <SettingsBanner tone={tone} message={t(`banner.${status as GithubBannerStatus}`)} />;
+export async function GitConnectBanner({ status, gitlabStatus }: GitConnectBannerProps) {
+  // Each provider resolves through ITS OWN total map, which is also its
+  // allow-list: a hand-typed `?github=whatever` is not a key, so it renders
+  // nothing rather than reaching `t('banner.<anything>')`.
+  if (status && status in GITHUB_BANNER_TONE) {
+    const t = await getTranslations('github');
+    return (
+      <SettingsBanner
+        tone={GITHUB_BANNER_TONE[status as GithubBannerStatus]}
+        message={t(`banner.${status as GithubBannerStatus}`)}
+      />
+    );
+  }
+  if (gitlabStatus && gitlabStatus in GITLAB_BANNER_TONE) {
+    const t = await getTranslations('gitlab');
+    return (
+      <SettingsBanner
+        tone={GITLAB_BANNER_TONE[gitlabStatus as GitlabBannerStatus]}
+        message={t(`banner.${gitlabStatus as GitlabBannerStatus}`)}
+      />
+    );
+  }
+  return null;
 }

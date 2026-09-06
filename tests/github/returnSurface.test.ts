@@ -43,10 +43,23 @@ describe('the surface registry', () => {
     }
   });
 
-  it('defaults to the path both routes hard-coded before this card', () => {
-    // The compatibility claim in one line: an in-flight round trip that started
-    // before the deploy lands exactly where it used to.
-    expect(DEFAULT_RETURN_PATH).toBe('/settings/workspace/github');
+  it('⚠️ defaults to the surface the git settings MOVED to, not the deleted one', () => {
+    // It was `/settings/workspace/github` — the path both routes hard-coded
+    // before MOTIR-4676 — and MOTIR-4680 DELETED that route, leaving a permanent
+    // redirect to this one. The default follows the surface rather than relying
+    // on the redirect: a default that names a route the app no longer serves
+    // cannot be read as deliberate, and every origin-less flow would pay the
+    // extra hop.
+    expect(DEFAULT_RETURN_PATH).toBe('/settings/organization/git');
+  });
+
+  it('…and the two WORKSPACE ids stay in the map, for a round trip already carrying one', () => {
+    // The compatibility claim, moved to where it is actually true: an envelope
+    // minted before the deploy names `workspaceGithub`, still resolves, and
+    // lands through the redirect.
+    expect(GITHUB_RETURN_SURFACES.workspaceGithub).toBe('/settings/workspace/github');
+    expect(GITHUB_RETURN_SURFACES.workspaceGitlab).toBe('/settings/workspace/gitlab');
+    expect(parseReturnSurfaceId('workspaceGithub')).toBe('workspaceGithub');
   });
 });
 
