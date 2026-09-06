@@ -542,9 +542,9 @@ asset decides how it LOOKS and nothing about what it DOES.
 
 | depicted                                                           | grounded in                                                                                                        |
 | ------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------ |
-| A discovery row that does not run because the substrate answers it | **MOTIR-4759** — _`discovery` becomes a SATISFIABLE migrate step, not a mandatory one_                             |
+| A direction row that does not run because the substrate answers it | **MOTIR-4759** — _`discovery` becomes a SATISFIABLE migrate step, not a mandatory one_                             |
 | That the wizard ADVANCES past it rather than the user skipping it  | MOTIR-4759's _"the wizard advances past it when the substrate read says the repository and the backlog answer it"_ |
-| The FLOOR — no repository and no backlog ⇒ every tier walked       | MOTIR-4759's _"the floor case still walks the tiers"_, and **MOTIR-4758**'s guaranteed floor (motir-ai)            |
+| The FLOOR — no repository and no backlog ⇒ the questions asked     | MOTIR-4759's _"the floor case still walks the tiers"_, and **MOTIR-4758**'s guaranteed floor (motir-ai)            |
 | That the run RECORDS which way it went, so the surface can say so  | MOTIR-4759's _"the run records which way it went"_ — the provenance line is that record, rendered                  |
 | That the entrance routes a repo-carrying project here by DEFAULT   | **MOTIR-4756** — the substrate read + `shouldRouteToMigrateWizard` deciding on both inputs                         |
 | The two questions the satisfied row claims are answered            | **MOTIR-4758** — the test is the floor tiers' own questions (What/Who · In-v1/Out)                                 |
@@ -556,15 +556,48 @@ thing and declined it. **SATISFIED is Motir's** — it read their repository and
 not need to ask. Dressing the second in the first's clothes tells a user they passed on something
 they were never shown; dressing either in the **done** tick says they did the step.
 
-| row state                                      | marker fill                                                         | glyph           | name ink              | meta line                                          |
-| ---------------------------------------------- | ------------------------------------------------------------------- | --------------- | --------------------- | -------------------------------------------------- |
-| `pending` (`.step.current`)                    | `--el-accent` on `--el-surface-soft`, ring `--el-accent-on-surface` | the step NUMBER | `--el-text-strong`    | the question it asks                               |
-| `user-skipped` (`.step.skipped`, NEW)          | `--el-muted`, border `--el-border`                                  | **dash**        | `--el-text-secondary` | _"You skipped this"_ — whose choice it was         |
-| `substrate-satisfied` (`.step.satisfied`, NEW) | `--el-tint-sky`, border `--el-border`                               | **book / read** | `--el-text-strong`    | _"Answered by your repo and backlog"_ — the source |
-| `done` (unchanged)                             | `--el-success-surface`                                              | check           | `--el-text-strong`    | —                                                  |
+| row state                                      | marker fill                                                         | glyph           | name                           | meta line                                  |
+| ---------------------------------------------- | ------------------------------------------------------------------- | --------------- | ------------------------------ | ------------------------------------------ |
+| `pending` (`.step.current`)                    | `--el-accent` on `--el-surface-soft`, ring `--el-accent-on-surface` | the step NUMBER | _"A few questions"_            | _"What you're building, and who for"_      |
+| `user-skipped` (`.step.skipped`, NEW)          | `--el-muted`, border `--el-border`                                  | **dash**        | the step's own name            | _"You skipped this"_ — whose choice it was |
+| `substrate-satisfied` (`.step.satisfied`, NEW) | `--el-tint-sky`, border `--el-border`                               | **book / read** | _"Answered from your project"_ | _"Your code and your backlog said it"_     |
+| `done` (unchanged)                             | `--el-success-surface`                                              | check           | the step's own name            | —                                          |
 
 **Not colour-alone** (the standing rule): each of the three pairs a distinct GLYPH and a distinct
-META LINE with its tint, so the states are separable in greyscale and to a screen reader.
+NAME-or-META with its tint, so the states are separable in greyscale and to a screen reader.
+
+### ⚠️ ONE ROW, AND IT NEVER NAMES A TIER (Yue, 2026-09-06)
+
+**An earlier revision of this panel drew the direction stage as FOUR rows — Discovery, Vision,
+Feasibility, Validation — and that was wrong for the same reason "Pre-plan" was wrong.** Those are
+the planner's identifiers (`DirectionDocKind`, `producibleTiers`) for questions the user is simply
+being asked. A rail that lists them by name teaches a stranger four words before it tells them
+anything, and it does it on the first surface they ever see. **This is MOTIR-4757's rule one surface
+over** — internal vocabulary travelling out of the rule corpus into user-facing text, written in
+good faith by somebody who had just been reading the corpus — and a design asset is exactly where
+that gets laundered into looking decided.
+
+So the rail carries **one row** for the whole direction stage:
+
+- **pending** — named _"A few questions"_, meta _"What you're building, and who for"_. The user is
+  told what the step IS and what it is about; which four documents it produces is the planner's
+  business.
+- **satisfied** — the NAME carries the outcome, _"Answered from your project"_, because a row the
+  user never saw has to explain itself in the one place they meet it. The meta line says which part
+  of the project answered.
+
+**And the FLOOR rail collapses with it.** It used to draw all four tiers to make the point that they
+are all walked; it now draws the one row in its pending state, which makes the same point without
+the vocabulary. Nothing about the floor's BEHAVIOUR changed — every question is still asked, and no
+state above is reachable from there.
+
+**What the consuming card owes is therefore SMALLER than the first revision implied:** one rail row,
+not a four-row group. MOTIR-4759's sizing is amended accordingly.
+
+**The board CHROME still says "discovery"** — the panel label, the state captions, this note. That is
+deliberate and is the distinction the whole section is about: chrome is addressed to whoever builds
+the surface, and the rail is addressed to whoever uses it. Only one of the two is a place the
+planner's own nouns may appear.
 
 ### The PROVENANCE line — a statement, never a gate
 
