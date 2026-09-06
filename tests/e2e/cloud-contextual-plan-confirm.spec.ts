@@ -61,6 +61,18 @@ import {
   CONTEXTUAL_JOB_ID,
 } from './_helpers/contextual-plan-seed';
 
+// ⚠️ RE-POINTED FOR THE OVERLAY (MOTIR-4732, story MOTIR-4725). The planning
+// workspace was a ROUTE at `/planning`; it is a full-screen OVERLAY on the page
+// you are already on. So an address that used to BE the workspace is now a host
+// page plus four namespaced parameters, and a `waitForURL` that matched the old
+// path matches nothing. The assertions about what the workspace DOES are
+// unchanged — only how it is reached and how its arrival is detected.
+//
+// (`/planning?…` still resolves: `app/(authed)/planning/page.tsx` forwards an old
+// link to the host page it belonged to. Its own coverage is in
+// `tests/integration/planning/planChangeSeams.test.ts`; these specs address the
+// overlay directly, which is what a reader would write today.)
+
 test.describe.configure({ timeout: 120_000 });
 
 // ── What the runs propose ────────────────────────────────────────────────────
@@ -279,7 +291,7 @@ async function openWorkspaceFromItem(page: Page, itemKey: string, mode: 'plan' |
   await expect(entrance(page)).toBeVisible();
   await expect(entrance(page)).toHaveAttribute('data-mode', mode);
   await entrance(page).click();
-  await page.waitForURL(/\/planning\?/);
+  await page.waitForURL((url) => url.searchParams.has('plan'));
   // ⚠️ THE FIRST LANDMARK AFTER LANDING ON `/planning` CARRIES THE FIRST-PAINT
   // BUDGET (MOTIR-2506) — see the constant's own note. Every test in this file
   // reaches the workspace through this helper, so the budget belongs here rather
@@ -407,7 +419,7 @@ test('planning in context — the item’s own door, reviewed, confirmed, landed
     await expect(entrance(page)).toHaveAccessibleName(`Plan ${seed.notifKey}`);
 
     await entrance(page).click();
-    await page.waitForURL(/\/planning\?.*item=/);
+    await page.waitForURL((url) => url.searchParams.get('planItem') !== null);
 
     // The workspace opens ANCHORED at the item: the rail names it, and the mode
     // chip is the contextual one (not the project-wide plan change).

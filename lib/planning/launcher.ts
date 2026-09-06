@@ -6,8 +6,9 @@
 //
 // This module is the launcher's PURE core: it maps the surface the user invoked
 // the launcher FROM (the originating context) to the planning MODE the workspace
-// should open in, and builds the href that carries that context to the
-// workspace. It is deliberately framework-free (no React, no `server-only`) so
+// should open in, and composes the OVERLAY ADDRESS that carries that context —
+// the current page's own href plus four namespaced parameters, since MOTIR-4725
+// made the workspace a layer rather than a place. It is deliberately framework-free (no React, no `server-only`) so
 // it runs identically in the client launcher, the ⌘K command, and unit tests.
 //
 // The four modes are STATES of the one workspace surface (design §"The planning
@@ -61,12 +62,23 @@ export type PlanningLaunchContext =
  * forwarded from the host to `/onboarding`, so first-run and migrate projects
  * keep their journey (the host is an ADDITIONAL surface, not a bypass).
  */
-/** @deprecated The ROUTE era's entry path. The workspace is an OVERLAY on the
- *  page you are already on (MOTIR-4725), so there is no path to go to — see
- *  {@link withPlanningOverlay}. Kept exported and behaviourally unchanged for
- *  the five importers still on the old shape; MOTIR-4732 deletes it with the
- *  `(planning)` route group. */
-export const PLANNING_WORKSPACE_PATH = '/planning';
+/* ⚠️ THREE ROUTE-ERA EXPORTS WERE DELETED HERE (MOTIR-4732, story MOTIR-4725),
+ * and this note is what a reader meeting an old citation lands on.
+ *
+ *   · `PLANNING_WORKSPACE_PATH` — `'/planning'`, the workspace's entry path.
+ *   · `planningWorkspaceHref(context)` — the DESTINATION a door navigated to.
+ *   · `planningLaunchBackHref(launch)` — where Close RETURNED to, resolved from
+ *     the origin: the item page, `/code-health`, or `/roadmap`.
+ *
+ * The workspace is an OVERLAY now: it opens ON the page you are already on and
+ * closes by removing four query parameters from that page's own address. So
+ * there is no destination to build and no return route to resolve —
+ * `withPlanningOverlay` and `withoutPlanningOverlay` below are what replaced
+ * them, and `parsePlanningOverlay` is what reads the result back.
+ *
+ * The return MAPPING survives in one place, because an old link still needs a
+ * page to land on: `app/(authed)/planning/page.tsx`, the forward, inlines it.
+ */
 
 /** Resolve the originating context to the planning mode the workspace opens in. */
 export function resolvePlanningMode(context: PlanningLaunchContext): PlanningMode {
@@ -87,30 +99,18 @@ export function resolvePlanningMode(context: PlanningLaunchContext): PlanningMod
   }
 }
 
-/**
- * Build the href that opens the planning workspace in the resolved mode,
- * carrying the originating context as query params so the workspace can seed
- * itself.
- */
-/** @deprecated Returns a DESTINATION. The overlay has none: it opens on the
- *  page you are on. Use {@link withPlanningOverlay}. Deleted by MOTIR-4732. */
-export function planningWorkspaceHref(context: PlanningLaunchContext): string {
-  const params = new URLSearchParams({
-    mode: resolvePlanningMode(context),
-    from: context.kind,
-  });
-  if (context.kind === 'work-item') params.set('item', context.itemKey);
-  if (context.kind === 'convention-refine') params.set('repo', context.repoKey);
-  return `${PLANNING_WORKSPACE_PATH}?${params.toString()}`;
-}
-
 // ─── The INVERSE: reading the launch context back off the host's query ────────
 //
-// `planningWorkspaceHref` writes the context; the host (MOTIR-1729) reads it.
-// Both halves live here, in the launcher's pure core, so the two can never drift
+// `planningOverlaySearch` writes the context; the overlay reads it back. Both
+// halves live here, in the launcher's pure core, so the two can never drift
 // apart and both are unit-testable without a route.
+//
+// `parsePlanningLaunch` still reads the ROUTE-ERA names (`mode` / `from` /
+// `item` / `repo`) — it has exactly one caller left, the `/planning` FORWARD
+// (MOTIR-4732), which is what an old bookmark lands on. It is kept for that and
+// nothing else; `parsePlanningOverlay` is what every live surface uses.
 
-/** The origin kinds `planningWorkspaceHref` writes as `?from=`. */
+/** The origin kinds an overlay address carries as `planFrom`. */
 export type PlanningOrigin = PlanningLaunchContext['kind'];
 
 const PLANNING_MODES: readonly PlanningMode[] = [
@@ -179,25 +179,6 @@ export function parsePlanningLaunch(searchParams: Record<string, RawParam>): Pla
     itemKey: from === 'work-item' ? first(searchParams['item']) : null,
     repoKey: from === 'convention-refine' ? first(searchParams['repo']) : null,
   };
-}
-
-/**
- * Where the workspace's Close control returns to. The design's overlay "returns
- * you to the exact screen you launched from" (`planning-workspace.mock.html`
- * sheet 6); the host is a route, so the origin resolves to the surface that owns
- * that context — the project roadmap being the project-scoped default.
- */
-/** @deprecated Resolves a RETURN route, which is the defect MOTIR-4725 exists
- *  to remove: from `/backlog`, `/boards`, `/ready` or `/home` it sends the
- *  reader somewhere else entirely. Closing an overlay is
- *  {@link withoutPlanningOverlay} of the address you are already at. Deleted by
- *  MOTIR-4732. */
-export function planningLaunchBackHref(launch: PlanningLaunch): string {
-  if (launch.from === 'work-item' && launch.itemKey) {
-    return `/items/${encodeURIComponent(launch.itemKey)}`;
-  }
-  if (launch.from === 'convention-refine') return '/code-health';
-  return '/roadmap';
 }
 
 /* ────────────────────────────────────────────────────────────────────────────

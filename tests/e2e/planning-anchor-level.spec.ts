@@ -23,6 +23,18 @@ import { resetDatabase, db } from './_helpers/db-reset';
 import { signIn } from './_helpers/shell-session';
 import { seedPlanningAnchorTree } from './_helpers/planning-anchor-seed';
 
+// ⚠️ RE-POINTED FOR THE OVERLAY (MOTIR-4732, story MOTIR-4725). The planning
+// workspace was a ROUTE at `/planning`; it is a full-screen OVERLAY on the page
+// you are already on. So an address that used to BE the workspace is now a host
+// page plus four namespaced parameters, and a `waitForURL` that matched the old
+// path matches nothing. The assertions about what the workspace DOES are
+// unchanged — only how it is reached and how its arrival is detected.
+//
+// (`/planning?…` still resolves: `app/(authed)/planning/page.tsx` forwards an old
+// link to the host page it belonged to. Its own coverage is in
+// `tests/integration/planning/planChangeSeams.test.ts`; these specs address the
+// overlay directly, which is what a reader would write today.)
+
 // Service-side seeding of a whole tenant + tree, the sign-in flow and the canvas
 // render comfortably exceed the 30s default.
 test.describe.configure({ timeout: 120_000 });
@@ -35,9 +47,9 @@ test.afterAll(async () => {
   await db.$disconnect();
 });
 
-/** The workspace's own entry href — the launcher's `work-item` context. */
+/** The address the per-item door writes — the overlay, over that item's page. */
 const anchoredHref = (itemKey: string) =>
-  `/planning?mode=contextual&from=work-item&item=${encodeURIComponent(itemKey)}`;
+  `/items/${encodeURIComponent(itemKey)}?plan=contextual&planFrom=work-item&planItem=${encodeURIComponent(itemKey)}`;
 
 /** A CANVAS node by its title. Scoped to the canvas's node layer on purpose: the
  *  anchor's title also appears in the chat's target CHIP, so a bare text lookup
@@ -138,7 +150,7 @@ test('re-entering from the canvas’s OWN peek re-seeds the level and the target
 
   // Open project-scoped (root level) and drill to the story, so a deep item is on
   // screen to peek at — and so the canvas has a level it would WRONGLY keep.
-  await page.goto('/planning?mode=replan&from=project');
+  await page.goto('/roadmap?plan=replan&planFrom=project');
   await expect(canvasNode(page, seed.epicTitle)).toBeVisible();
   await canvasNode(page, seed.epicTitle).click();
   await page.getByTestId('drill-button').click();
@@ -157,7 +169,7 @@ test('re-entering from the canvas’s OWN peek re-seeds the level and the target
   await expect(entrance).toBeVisible();
   await entrance.click();
 
-  await page.waitForURL(`**/planning**item=${seed.subtaskKey}`);
+  await page.waitForURL((url) => url.searchParams.get('planItem') === seed.subtaskKey);
 
   // The canvas re-seeded on the new anchor: its level, its ring…
   const target = page.getByTestId('planning-target-node');

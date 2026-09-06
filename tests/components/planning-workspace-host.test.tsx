@@ -3,7 +3,7 @@ import type { ReactNode } from 'react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { act, cleanup, fireEvent, screen, within } from '@testing-library/react';
 import { renderWithIntl } from '../helpers/renderWithIntl';
-import { parsePlanningLaunch, planningLaunchBackHref } from '@/lib/planning/launcher';
+import { parsePlanningLaunch } from '@/lib/planning/launcher';
 import type { PlanChangeConversationState } from '@/lib/hooks/usePlanChangeConversation';
 import type { PlanningTarget } from '@/lib/planning/planningTargets';
 
@@ -20,6 +20,9 @@ import type { PlanningTarget } from '@/lib/planning/planningTargets';
 // draw), and swaps in the empty state otherwise.
 
 const { push, refresh } = vi.hoisted(() => ({ push: vi.fn(), refresh: vi.fn() }));
+/** The host's `onClose` is REQUIRED since MOTIR-4732 — there is no `backHref`
+ *  fallback left, because the reader never leaves the page. */
+const noop = () => {};
 vi.mock('next/navigation', () => ({ useRouter: () => ({ push, refresh }) }));
 
 vi.mock('@/components/planning/PlanChangeCanvas', () => ({
@@ -153,8 +156,7 @@ function renderHost(
       projectName="Acme"
       launch={launch}
       anchorId={anchorId}
-      onClose={onClose}
-      backHref={planningLaunchBackHref(launch)}
+      onClose={onClose ?? noop}
       initialTarget={initialTarget}
       initialCanvasTrail={initialCanvasTrail}
       canManage={canManage}
@@ -173,7 +175,7 @@ function hostElement(searchParams: Record<string, string | string[] | undefined>
       projectName="Acme"
       launch={launch}
       anchorId={null}
-      backHref={planningLaunchBackHref(launch)}
+      onClose={noop}
       initialTarget={null}
       canManage={false}
     />
@@ -584,13 +586,19 @@ describe('PlanningWorkspaceHost — the shell carries its own exit chrome', () =
     expect(push).not.toHaveBeenCalled();
   });
 
-  it('falls back to `backHref` for the retiring page, which cannot pass a callback', () => {
-    // The `(planning)` route is a Server Component, so it hands an href. That
-    // arm — and the page — go away with MOTIR-4732.
-    renderHost({ mode: 'contextual', from: 'work-item', item: 'MOTIR-7' });
+  it('has NO navigation fallback left — closing never routes anywhere', () => {
+    // ⚠️ RE-POINTED (MOTIR-4732). This asserted the `backHref` arm, which
+    // existed for one caller: the `(planning)` page, a Server Component that
+    // could not hand a callback across the boundary. That page is deleted, the
+    // prop with it, and `onClose` is required — there is nowhere to navigate
+    // BACK to, because the reader never left.
+    const onClose = vi.fn();
+    renderHost({ mode: 'contextual', from: 'work-item', item: 'MOTIR-7' }, { onClose });
 
     fireEvent.click(screen.getByRole('button', { name: /Close/ }));
-    expect(push).toHaveBeenCalledWith('/items/MOTIR-7');
+
+    expect(onClose).toHaveBeenCalledTimes(1);
+    expect(push).not.toHaveBeenCalled();
   });
 
   it('no longer listens for `Esc` itself — the dialog owns the key', () => {

@@ -72,7 +72,9 @@ import type { CanvasCrumb } from '@/lib/planning/projectCanvasModel';
 // second. That prop is gone. The canvas reads its own root level anyway (the
 // same level, over `fetchRoadmapLevel`), so it owns the loading and empty states
 // itself — one read instead of two, and none of them between the click and the
-// paint. `app/(planning)/loading.tsx` covers the navigation ahead of this.
+// paint. (`app/(planning)/loading.tsx` covered the navigation ahead of this while
+// the workspace was a route; the overlay has no navigation to cover — it renders
+// `PlanningWorkspaceSkeleton` inside the dialog instead.)
 
 export interface PlanningWorkspaceHostProps {
   /** The project's `MOTIR`-style key — the canvas's per-level read source. */
@@ -95,31 +97,26 @@ export interface PlanningWorkspaceHostProps {
    *  so a banner shown to anyone else is an invitation to a 403.
    *
    *  ⚠️ Still passed EXPLICITLY rather than read from `useProjectAccess()` here,
-   *  and the reason has changed. It used to be that `/planning` lived OUTSIDE
-   *  `(authed)`, so the provider was not mounted and the hook returned its
-   *  permissive default. The overlay mounts INSIDE `(authed)`, so the provider
-   *  IS there — and the overlay reads it, with the permission's own name
-   *  (`can('ai:configure')`), and passes the answer down. The prop stays because
-   *  this host is still rendered by the `(planning)` route until MOTIR-4732
-   *  deletes it, and that render has no provider above it. */
+   *  and the reason has changed. It used to be that the `/planning` ROUTE lived
+   *  OUTSIDE `(authed)`, so the provider was not mounted and the hook returned
+   *  its permissive default. That route is gone (MOTIR-4732) and the overlay
+   *  mounts INSIDE `(authed)`, so the provider IS there — the OVERLAY reads it,
+   *  with the permission's own name (`can('ai:configure')`), and passes the
+   *  answer down. Kept as a prop because this host is presentational about
+   *  access: it renders what it is told, and every gate is decided one level up
+   *  where the provider is. */
   canManage?: boolean;
   /** Close the workspace. The overlay routes Close, `Esc`, the scrim and a
    *  browser Back through ONE `requestClose()`, which is the seam the pending
    *  guard (MOTIR-4731) intercepts — so this control must call it rather than
    *  navigate.
    *
-   *  Optional for exactly one caller and exactly as long as it lives: the
-   *  `(planning)` page is a SERVER Component and cannot hand a function across
-   *  the boundary, so it keeps passing {@link PlanningWorkspaceHostProps.backHref}
-   *  and this host falls back to a navigation. MOTIR-4732 deletes that page and
-   *  the fallback with it. */
-  onClose?: () => void;
-  /** @deprecated The ROUTE era's return address. An overlay has none — it closes
-   *  by removing four query parameters from the address the reader is already
-   *  at. Read only when {@link PlanningWorkspaceHostProps.onClose} is absent,
-   *  which is the `(planning)` page and nothing else; deleted with it by
-   *  MOTIR-4732. */
-  backHref?: string;
+   *  ⚠️ REQUIRED since MOTIR-4732. It was briefly optional, with a `backHref`
+   *  fallback, for exactly one caller: the `(planning)` page, a SERVER Component
+   *  that could not hand a function across the boundary. That page is deleted
+   *  and the fallback went with it — there is nowhere to navigate BACK to,
+   *  because the reader never left. */
+  onClose: () => void;
   /**
    * A slot the OVERLAY hands down so this host can VETO a close (MOTIR-4731).
    *
@@ -130,7 +127,8 @@ export interface PlanningWorkspaceHostProps {
    * do not close*. That keeps the seam in one place and the state in one place,
    * with a single function between them.
    *
-   * Absent for the `(planning)` route, which has no guard and never had one.
+   * Absent wherever a caller does not want the question asked — a test
+   * rendering the host in isolation, for instance. No guard, no veto.
    */
   closeGuardRef?: RefObject<(() => boolean) | null>;
   /**
@@ -166,7 +164,6 @@ export function PlanningWorkspaceHost({
   onClose,
   closeGuardRef,
   onKeepPlanningAfterBack,
-  backHref,
   initialTarget = null,
   initialCanvasTrail,
 }: PlanningWorkspaceHostProps) {
@@ -190,8 +187,7 @@ export function PlanningWorkspaceHost({
   // ── THE CLOSE, AND THE ONE QUESTION IT MAY ASK (MOTIR-4731) ───────────────
   //
   // `onClose` is the overlay's `requestClose` — the seam every close vector
-  // converges on; `backHref` is the retiring page's navigation, kept only
-  // because a Server Component cannot pass a callback (MOTIR-4732 removes it).
+  // converges on.
   const [guardOpen, setGuardOpen] = useState(false);
   // Set while a decision THE GUARD took is closing the workspace, so the veto
   // lets that close through. Without it the guard would answer its own question:
@@ -200,12 +196,8 @@ export function PlanningWorkspaceHost({
   const bypassRef = useRef(false);
 
   const performClose = useCallback(() => {
-    if (onClose) {
-      onClose();
-      return;
-    }
-    if (backHref) router.push(backHref);
-  }, [onClose, backHref, router]);
+    onClose();
+  }, [onClose]);
 
   const closeBypassingGuard = useCallback(() => {
     bypassRef.current = true;

@@ -187,8 +187,15 @@ export async function proxy(request: NextRequest) {
 }
 
 export const config = {
-  // Every URL that maps to a page under `app/(authed)/`, plus the two other
-  // signed-in route groups (`(onboarding)`, `(planning)`).
+  // Every URL that maps to a page under `app/(authed)/`, plus the one other
+  // signed-in route group, `(onboarding)`.
+  //
+  // ⚠️ `/planning` STAYS ON THIS LIST although its route group is gone
+  // (MOTIR-4732). The workspace is an overlay now and `app/(authed)/planning`
+  // holds only a FORWARD for old links — and that forward is exactly why the
+  // entry matters: without it a cookie-less request to a bookmarked
+  // `/planning?…` gets the segment's own gate instead of the
+  // `/sign-in?next=/planning…` bounce this matcher exists to give it.
   //
   // ⚠️ THIS LIST IS GUARDED, NOT REMEMBERED (MOTIR-3652). It used to carry a
   // comment asking future authors to append each new authed route, and thirteen
