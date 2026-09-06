@@ -1,6 +1,6 @@
 import { afterAll, afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { readFileSync } from 'node:fs';
-import { NextRequest } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
 import { encodeInstallState } from '@/lib/github/installState';
 import {
@@ -170,7 +170,9 @@ describe('the START route narrows the origin before it is ever stored', () => {
     const res = await startGET(
       new NextRequest(`http://localhost:3000/api/github/oauth/start${query}`),
     );
-    return res.cookies.get(GITHUB_OAUTH_STATE_COOKIE)?.value;
+    // The route is typed `Promise<Response>`; the cast is this repo's idiom for
+    // reading the cookie jar off it (`github-oauth-routes`, `plane-oauth-routes`).
+    return (res as NextResponse).cookies.get(GITHUB_OAUTH_STATE_COOKIE)?.value;
   }
 
   it('stores `<nonce>.<id>` for a registered surface', async () => {

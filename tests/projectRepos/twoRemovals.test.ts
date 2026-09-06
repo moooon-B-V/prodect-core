@@ -290,7 +290,9 @@ describe('DISCONNECT FROM THE ORGANISATION — the cascade', () => {
     expect(await adminDb.githubRepo.findUnique({ where: { id: repoGitlab } })).toBeNull();
 
     // …and the offboarding is enqueued with the REASON that makes it windowed.
-    const reasons = enqueueSpy.mock.calls.map((c) => (c[0] as { reason: string }).reason);
+    const reasons = enqueueSpy.mock.calls.map(
+      (c: unknown[]) => (c[0] as { reason: string }).reason,
+    );
     expect(new Set(reasons)).toEqual(new Set(['repo_disconnected']));
 
     const pending = await withSystemContext((tx) => tx.codeGraphOffboarding.findMany());

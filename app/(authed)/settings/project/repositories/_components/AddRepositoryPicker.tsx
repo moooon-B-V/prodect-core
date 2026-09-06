@@ -152,7 +152,7 @@ export function AddRepositoryPicker({
                     type="button"
                     onClick={() => void pick(repo)}
                     disabled={pickingId !== null}
-                    className="flex w-full items-center gap-3 rounded-(--radius-control) px-(--spacing-control-x) py-(--spacing-control-y) text-left hover:bg-(--el-option-hover-bg) disabled:opacity-60"
+                    className="flex w-full items-center gap-3 rounded-(--radius-control) px-(--spacing-control-x) py-(--spacing-control-y) text-left hover:bg-(--el-surface) disabled:opacity-60"
                   >
                     <FolderGit2 className="h-4 w-4 shrink-0 text-(--el-icon-muted)" aria-hidden />
                     <span className="min-w-0 flex-1 truncate font-sans text-sm text-(--el-text)">

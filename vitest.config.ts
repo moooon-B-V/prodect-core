@@ -2008,12 +2008,6 @@ export default defineConfig({
           branches: 90,
           statements: 90,
         },
-        'lib/projectRepos/roomSections.ts': {
-          lines: 90,
-          functions: 90,
-          branches: 90,
-          statements: 90,
-        },
         // Story MOTIR-1215 · Subtask MOTIR-3646 — both measured at 100 on all
         // four axes on this branch before pinning.
         // Story MOTIR-3808 · MOTIR-3816 — pinned at the project floor after
@@ -3229,7 +3223,17 @@ export default defineConfig({
           lines: 90,
         },
         'lib/projectRepos/effectiveDomain.ts': { branches: 90, functions: 90, lines: 90 },
-        'lib/projectRepos/roomSections.ts': { branches: 90, functions: 90, lines: 90 },
+        // ⚠️ `statements` added by MOTIR-4681, which gave this module
+        // `splitSetRowsByOrigin`. The module was ALREADY pinned here, so the
+        // story strengthens the existing row rather than adding a second one —
+        // two entries for one path is a duplicate key, and the later wins
+        // silently.
+        'lib/projectRepos/roomSections.ts': {
+          branches: 90,
+          functions: 90,
+          lines: 90,
+          statements: 90,
+        },
         'lib/planning/repositorySetClient.ts': { branches: 90, functions: 90, lines: 90 },
         'components/planning/repositories/RepositorySetStep.tsx': {
           branches: 90,

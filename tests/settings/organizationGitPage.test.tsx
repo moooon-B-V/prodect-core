@@ -7,6 +7,7 @@ import { RepositoryInventory } from '@/app/(authed)/settings/organization/git/_c
 import { CODE_GRAPH_RETENTION_WINDOW_DAYS } from '@/lib/codeGraph/offboarding';
 import { SETTINGS_REDIRECTS } from '../../next.config';
 import type { OrgRepoInventoryRowDto } from '@/lib/dto/organizationRepos';
+import type { CodeGraphIndexState } from '@/lib/codeGraph/indexState';
 
 // SETTINGS → ORGANISATION → GIT (Story MOTIR-4669 · MOTIR-4680), against
 // `design/github/github.mock.html` Panel 6 and the surrounding contracts.
@@ -41,7 +42,7 @@ const ROW = (
   id: string,
   name: string,
   projects: string[],
-  indexState: 'indexed' | 'never' = 'indexed',
+  indexState: CodeGraphIndexState = 'indexed',
   provider: 'github' | 'gitlab' = 'github',
 ): OrgRepoInventoryRowDto => ({
   repo: REPO(id, name, provider),

@@ -1,6 +1,7 @@
 import { readFileSync } from 'node:fs';
 import { execSync } from 'node:child_process';
 import { afterAll, beforeEach, describe, expect, it } from 'vitest';
+import type { Prisma } from '@/generated/prisma/client';
 import { db } from '@/lib/db';
 import { adminDb } from '../helpers/adminDb';
 import { truncateAuthTables, truncateJobRuns } from '../helpers/db';
@@ -70,9 +71,7 @@ afterAll(async () => {
 });
 
 /** A succeeded ledger row for `REPO_REF` — what "a graph exists" means. */
-function seedSucceededIndex(
-  output: Record<string, unknown> = { indexed: true, repoRef: REPO_REF },
-) {
+function seedSucceededIndex(output: Prisma.InputJsonObject = { indexed: true, repoRef: REPO_REF }) {
   return adminDb.jobRun.create({
     data: {
       workspaceId: fx.workspaceId,
