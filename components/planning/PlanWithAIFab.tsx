@@ -25,7 +25,8 @@ import { useDraggableOrb } from '@/lib/hooks/useDraggableOrb';
  * unchanged: the same fill, glow, pulse, position, z-index and transitions.
  *
  * The one-click path is NOT lost — the TopNav hero pill and ⌘K still go
- * straight to `/planning` from every screen, and the rows are real links, so
+ * straight to the workspace from every screen — as an OVERLAY on the page they
+ * are on since MOTIR-4725 — and the rows are real links, so
  * ⌘/middle-click survives one level in.
  *
  * Wears the Motir mark (MOTIR-3185) at the 26px glyph box the design

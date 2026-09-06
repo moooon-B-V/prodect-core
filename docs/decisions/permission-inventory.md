@@ -876,6 +876,7 @@ MOTIR-2277 grows the catalog and MOTIR-2256 wires the enforcement.
 | `/api/work-items/[id]/triage/snooze`                    | DELETE/POST | `triageService.*` → `assertPermission`                                                     | `work_item:triage`      | existing | R23 |
 | `/api/work-items/mention-search`                        | GET         | `workItemsService.quickSearch` → `filterBrowsable` (a real gate the walk could not follow) | `project:browse`        | existing | R2  |
 | `/api/work-items/peek`                                  | GET         | `assertCanBrowse`, `getCapabilities`                                                       | `project:browse`        | existing | R2  |
+| `/api/work-items/planning-anchor`                       | GET         | `workItemsService.getWorkItemWithAncestors` → `assertCanBrowse`                            | `project:browse`        | existing | R2  |
 
 ### `workflow`
 

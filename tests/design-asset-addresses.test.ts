@@ -1344,6 +1344,66 @@ const KNOWN_PATHS: { file: string; path: string; why: string }[] = [
     path: 'app/(public)/legal',
     why: 'The chrome-comparison table names where each surface was served in motir-core before the move. MOTIR-4103 deleted `app/(public)/legal/` — and with it the whole `(public)` route group — so the citation is a point-in-time record of the host this asset exists to move those pages OFF.',
   },
+  // ── The `(planning)` ROUTE GROUP, deleted (MOTIR-4732, under MOTIR-4725) ──
+  // The same shape as the `app/(public)/legal` row above — a deletion, not a
+  // move — and the largest one this table has held, because the group these
+  // eight cite was a surface six areas had reason to name.
+  //
+  // The planning workspace is an OVERLAY now: `PlanningWorkspaceOverlay` mounts
+  // once in `app/(authed)/layout.tsx`, opened by four namespaced query
+  // parameters on whatever page the reader is already on, and the one path left
+  // at `/planning` is a forward for old links inside `(authed)`. So
+  // `app/(planning)/layout.tsx`, `.../loading.tsx` and `.../planning/page.tsx`
+  // are gone, and none of them is coming back.
+  //
+  // Every one of these citations is a sentence about HISTORY that is still
+  // TRUE — *what the frame used to be*, *where the nudge used to render*, *which
+  // `loading.tsx` this story did not touch* — and correcting them would mean
+  // rewriting six assets to un-say things they correctly said when they were
+  // drawn. `design/ai-chat/design-notes.md` is the one asset that already
+  // re-states it: its sheet 6 was redrawn for the overlay (MOTIR-4726) and both
+  // its citations sit inside the AMENDED block explaining what the route WAS.
+  // These rows are permanent and carry no delete-me instruction.
+  {
+    file: 'design/ai-chat/design-notes.md',
+    path: 'app/(planning)/layout.tsx',
+    why: "Sheet 6's `⚠️ AMENDED 2026-09-06` block, naming the route the overlay replaced so a reader can see what changed. The sentence is in the past tense already; the path is what it is about.",
+  },
+  {
+    file: 'design/ai-chat/design-notes.md',
+    path: 'app/(planning)/loading.tsx',
+    why: "The overlay's state table: the Opening row says the in-dialog `PlanningWorkspaceSkeleton` *is the frame `app/(planning)/loading.tsx` used to be*. Naming the retired file is the whole content of that row.",
+  },
+  {
+    file: 'design/audit-coverage/design-notes.md',
+    path: 'app/(planning)/planning/page.tsx',
+    why: 'Records where the audit-coverage nudge rendered — the page that hosted `PlanningWorkspaceHost` when MOTIR-2250 placed it. The nudge still renders on the workspace; the workspace is no longer a page.',
+  },
+  {
+    file: 'design/roadmap/design-notes.md',
+    path: 'app/(planning)/planning/page.tsx',
+    why: "The silent-fallback rule cites `/planning`'s own `?item=` handling as the precedent the roadmap mirrors. The precedent is still the precedent; its file moved into `PlanningWorkspaceOverlay` and the parameter is `planItem` now.",
+  },
+  {
+    file: 'design/roadmap/roadmap-arrival.mock.html',
+    path: 'app/(planning)/planning/page.tsx',
+    why: 'The same sentence, in the mock the notes above describe. Assets and their notes carry the citation identically by design.',
+  },
+  {
+    file: 'design/settings/arrival.mock.html',
+    path: 'app/(planning)/loading.tsx',
+    why: 'The *nothing else under `app/` is touched* scope line, naming the two `loading.tsx` files that story deliberately left alone. A scope boundary is a point-in-time statement about the tree it was drawn against.',
+  },
+  {
+    file: 'design/settings/design-notes.md',
+    path: 'app/(planning)/loading.tsx',
+    why: 'The same scope line in the notes beside that mock.',
+  },
+  {
+    file: 'design/shell/design-notes.md',
+    path: 'app/(planning)/loading.tsx',
+    why: "The navigation-pending grammar's rule 5, naming the pre-existing boundaries it declares out of scope. MOTIR-3492's argument is unaffected — one of the files it set aside has since been deleted, which is a smaller tree, not a different rule.",
+  },
   // ── A path the design says must NEVER exist (MOTIR-3492) ──────────────────
   // The inverse of every other row here: these are not paths an asset expects
   // to find, they are the files the design forbids. A `loading.tsx` fallback
