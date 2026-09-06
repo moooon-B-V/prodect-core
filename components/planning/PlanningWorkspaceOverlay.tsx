@@ -313,6 +313,7 @@ export function PlanningWorkspaceOverlay({
       // The workspace carries its own Close, top-left. See the header note.
       hideClose
     >
+      {/* modal-scroll-container: measured 1280x700, tallest = the HOST with a full conversation in the rail and a drilled canvas; the full-size panel IS the viewport and the canvas, the rail and the host's exit bar each own their scroll (min-h-0 flex-1 overflow-auto), panel 700px */}
       {gate === 'no-access' ? (
         // The run modal's `missing` shape: say so, and get out of the way. Never
         // a 404 — there is no route to 404, and the page underneath is still
