@@ -12,6 +12,18 @@ import { summarizeRepositories } from '@/lib/projectRepos/roomSections';
 import { GitConnectBanner } from '@/components/settings/GitConnectBanner';
 import { RepositoriesRoom } from './_components/RepositoriesRoom';
 import { guardSettingsPage } from '../_guard';
+import { isOrgAdminForWorkspace } from '@/lib/services/organizationAccessService';
+import { organizationsService } from '@/lib/services/organizationsService';
+
+/** The member's own git account (MOTIR-4682) — where the room's connect prompt
+ *  hands off. It was `/settings/workspace/github`, a page MOTIR-4680 redirects
+ *  away; the credential is the member's and lives at the ACCOUNT tier. */
+const GIT_ACCOUNT_PATH = '/settings/account/git';
+
+/** The ORGANISATION's own inventory — `See every repository in <org>`. The
+ *  footer link stopped being a hand-off ("choose which repositories Motir can
+ *  see") and became a VIEW, which is the tier move in one line (§17.2). */
+const ORGANIZATION_GIT_PATH = '/settings/organization/git';
 
 // THE TAKE-IT-OVER ROOM (Story MOTIR-1775 · MOTIR-1939) — the surface behind the
 // ownership promise's `How moving it works` door, the billing panel's
@@ -123,7 +135,21 @@ async function RepositoriesPaneBody({
   workspaceId: string;
 }) {
   const t = await getTranslations('repositoryTakeover');
-  const view = await projectRepoRoomService.getRoomView(projectId, { userId, workspaceId });
+  // THREE reads, made concurrent: the room, the actor's ORG-admin answer, and the
+  // organisation's name. The last two are MOTIR-4681's — the room draws its add
+  // door or the sentence that says who can, and names the organisation in both
+  // the section heading and the picker.
+  //
+  // ⚠️ `isOrgAdminForWorkspace` is a RENDERING question, not a gate. The gate is
+  // `organizationRepoService`'s `assertOrgAdmin`, inside the transaction that
+  // performs the add — this only decides which affordance is drawn, which is why
+  // it returns a boolean rather than throwing.
+  const [view, canAddRepositories, organization] = await Promise.all([
+    projectRepoRoomService.getRoomView(projectId, { userId, workspaceId }),
+    isOrgAdminForWorkspace(userId, workspaceId),
+    organizationsService.resolveActiveOrganization(userId, null),
+  ]);
+  const organizationName = organization?.organization.name ?? '';
 
   // ONE timestamp for the whole render, threaded into the rows: `Date.now()` in
   // a client render would disagree with the server's by the round-trip and the
@@ -190,7 +216,10 @@ async function RepositoriesPaneBody({
       <RepositoriesRoom
         projectKey={projectKey}
         view={view}
-        connectHref="/settings/workspace/github"
+        connectHref={GIT_ACCOUNT_PATH}
+        canAddRepositories={canAddRepositories}
+        organizationName={organizationName}
+        organizationInventoryHref={ORGANIZATION_GIT_PATH}
         nowIso={nowIso}
       />
     </>

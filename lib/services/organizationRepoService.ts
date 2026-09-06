@@ -16,7 +16,7 @@ import { toProjectRepoDto } from '@/lib/mappers/projectRepoMappers';
 import { toOrgRepoOptionDto, toUsingProjectDto } from '@/lib/mappers/organizationRepoMappers';
 import type { OrgRepoOptionDto, OrgRepoUsageDto } from '@/lib/dto/organizationRepos';
 import type { ProjectRepoDto } from '@/lib/dto/projectRepos';
-import { defaultSeedSourceForRole } from '@/lib/projectRepos/vocabulary';
+import { SEED_SOURCE_ORGANIZATION } from '@/lib/projectRepos/vocabulary';
 import {
   GithubRemovalHappensOnGithubError,
   ProjectRepoInvalidFieldError,
@@ -412,7 +412,12 @@ export const organizationRepoService = {
             role: input.role,
             name,
             ...(input.label !== undefined ? { label: input.label } : {}),
-            seedSource: defaultSeedSourceForRole(input.role),
+            // ⚠️ NOT `defaultSeedSourceForRole` — see SEED_SOURCE_ORGANIZATION. This row
+            // seeds from nothing: the repository is the organisation's and has its own
+            // history. The Repositories room splits its two sections on exactly this
+            // question, so a default here would render the row under "Motir hosts…"
+            // offering Take it over for a repository the organisation already owns.
+            seedSource: SEED_SOURCE_ORGANIZATION,
             state: 'connected',
             githubRepoId: repo.id,
             position: keyForAppend(last),
@@ -476,7 +481,12 @@ export const organizationRepoService = {
             role: input.role,
             name,
             ...(input.label !== undefined ? { label: input.label } : {}),
-            seedSource: defaultSeedSourceForRole(input.role),
+            // ⚠️ NOT `defaultSeedSourceForRole` — see SEED_SOURCE_ORGANIZATION. This row
+            // seeds from nothing: the repository is the organisation's and has its own
+            // history. The Repositories room splits its two sections on exactly this
+            // question, so a default here would render the row under "Motir hosts…"
+            // offering Take it over for a repository the organisation already owns.
+            seedSource: SEED_SOURCE_ORGANIZATION,
             state: 'connected',
             githubRepoId: repo.id,
             position: keyForAppend(last),

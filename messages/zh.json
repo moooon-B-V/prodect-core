@@ -7645,5 +7645,38 @@
       "bugFiled": "已提交缺陷",
       "open": "打开 →"
     }
+  },
+  "repositoryPicker": {
+    "add": "添加仓库",
+    "title": "添加仓库",
+    "subtitle": "从组织已连接的仓库中挑选一个，或连接一个新的。",
+    "searchLabel": "搜索仓库",
+    "searchPlaceholder": "按名称筛选…",
+    "loading": "正在加载组织的仓库…",
+    "error": "无法加载组织的仓库，请重试。",
+    "noMatch": "没有匹配的仓库。",
+    "alreadyIndexed": "已建立索引 · 共享",
+    "alreadyInProject": "已在此项目中",
+    "connectNew": "在 GitHub 上连接新仓库",
+    "noInstallHref": "此部署暂不支持连接新仓库。",
+    "firstTimeLead": "连接第一个仓库后，它会同时进入 {org} 和这个项目。",
+    "segment": {
+      "organization": "在 {org} 中 · 已连接",
+      "connect": "连接新仓库"
+    },
+    "section": {
+      "heading": "来自你的组织",
+      "hint": "{org} 已连接、且这个项目正在使用的仓库。挑选它们不会重新建立索引。",
+      "foot": "这个项目需要时可随时添加。",
+      "footNoPermission": "只有组织的所有者和管理员可以添加仓库。请联系他们，或在「设置 → 组织 → Git」中添加。",
+      "seeAll": "查看 {org} 的全部仓库"
+    },
+    "remove": {
+      "action": "从此项目中移除",
+      "title": "确定从此项目中移除 {repo}？",
+      "body": "它仍与 {org} 保持连接，其他项目继续保留，代码索引不受影响。你可以随时重新添加，且不会重新建立索引。",
+      "confirm": "移除",
+      "cancel": "取消"
+    }
   }
 }
