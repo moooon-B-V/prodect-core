@@ -26,6 +26,13 @@ type Provider = 'github' | 'gitlab';
  * ⚠️ THE DESTINATION IS A PROP NOW (MOTIR-4669 · MOTIR-4680), defaulting to the
  * shipped workspace routes so this file's original two callers are unchanged.
  *
+ * ⚠️ IT IS DATA, NOT A FUNCTION, and that is a boundary rule rather than a
+ * preference: this is a client component, its caller is a Server Component, and
+ * React refuses a function across that line — *"Functions cannot be passed
+ * directly to Client Components."* The first cut passed `hrefFor` and the page
+ * threw at RENDER time, which no type check and no unit test caught; the
+ * acceptance walk did (MOTIR-4685, chapter 4). A two-entry record serialises.
+ *
  * The organisation's Git page is ONE route with the provider as a search param,
  * not two sibling routes: the org's repository INVENTORY spans both providers, so
  * the Segmented switches the CONNECTION card above it rather than the page. A
@@ -35,12 +42,17 @@ type Provider = 'github' | 'gitlab';
  * `router.push` rather than `shallowPush`, per `CLAUDE.md`'s rule: the target body
  * needs data the browser does not have — the OTHER provider's connection.
  */
+const WORKSPACE_HREFS: Record<Provider, string> = {
+  github: '/settings/workspace/github',
+  gitlab: '/settings/workspace/gitlab',
+};
+
 export function ProviderSwitch({
   active,
-  hrefFor = (value) => `/settings/workspace/${value}`,
+  hrefs = WORKSPACE_HREFS,
 }: {
   active: Provider;
-  hrefFor?: (value: Provider) => string;
+  hrefs?: Record<Provider, string>;
 }) {
   const t = useTranslations('git');
   const router = useRouter();
@@ -49,7 +61,7 @@ export function ProviderSwitch({
     <Segmented<Provider>
       label={t('provider.label')}
       value={active}
-      onChange={(value) => router.push(hrefFor(value))}
+      onChange={(value) => router.push(hrefs[value])}
       options={[
         { value: 'github', label: t('provider.github'), icon: <GithubMark /> },
         { value: 'gitlab', label: t('provider.gitlab'), icon: <GitlabMark /> },

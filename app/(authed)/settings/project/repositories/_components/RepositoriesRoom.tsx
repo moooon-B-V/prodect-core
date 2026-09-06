@@ -341,11 +341,28 @@ export function RepositoriesRoom({
   const { fromOrganization, motirHosted } = splitSetRowsByOrigin(rows);
 
   // ⚠️ THE EMPTY STATE IS FOR A PROJECT WITH NEITHER REGISTRY — nothing else.
-  // Reading it off `rows.length` alone is the defect this card fixes: it told a
+  // Reading it off `rows.length` alone is the defect MOTIR-3126 fixed: it told a
   // project holding five connected repositories that it had none. A project whose
   // repositories are workspace-connected has a complete, correct page; only a
   // project with no set AND nothing connected has nothing to show.
-  if (rows.length === 0 && !showConnected) {
+  //
+  // ⚠️ AND IT DOES NOT APPLY TO SOMEBODY WHO CAN ADD (MOTIR-4669 · MOTIR-4685).
+  // This empty state is a SIGNPOST — a panel whose one action is a link to another
+  // page — and `design/repository-set/design-notes.md` §17.4 forbids exactly that
+  // shape for exactly this moment: *"'Nothing to pick' must never render as a
+  // message whose job is to send somebody to another page: that turns one intent
+  // into two errands."*
+  //
+  // It survived MOTIR-4681 because that card added the org section BELOW this
+  // early return, so a project with nothing never reached it — the room offered a
+  // link to `/settings/account/git`, a page that cannot connect an organisation's
+  // repository at all. THE ACCEPTANCE WALK IS WHAT FOUND IT (MOTIR-4685, chapter
+  // 1), which is the whole argument for walking a story in a browser.
+  //
+  // So the early return now applies only when there is genuinely nothing to
+  // offer. An actor who may add falls through to the section below, whose own
+  // zero case is the PICKER.
+  if (rows.length === 0 && !showConnected && !canAddRepositories) {
     return (
       <EmptyState
         icon={<FolderGit2 className="h-12 w-12" aria-hidden />}

@@ -60,7 +60,7 @@ export default async function OrganizationGitPage({ searchParams }: OrgGitPagePr
   const ctx = await getWorkspaceContext();
   if (!ctx) {
     return (
-      <GitSettingsShell provider={provider} hrefFor={hrefFor}>
+      <GitSettingsShell provider={provider} hrefs={PROVIDER_HREFS}>
         <EmptyState title={t('noWorkspace.title')} description={t('noWorkspace.description')} />
       </GitSettingsShell>
     );
@@ -80,7 +80,7 @@ export default async function OrganizationGitPage({ searchParams }: OrgGitPagePr
   return (
     <GitSettingsShell
       provider={provider}
-      hrefFor={hrefFor}
+      hrefs={PROVIDER_HREFS}
       subtitle={t('organization.subtitleGeneric')}
     >
       {/* ABOVE the boundary: the banner is about the round trip the reader just
@@ -178,9 +178,16 @@ async function OrgGitBody({
   );
 }
 
-/** The provider Segmented stays on THIS route and changes a search param. */
-function hrefFor(value: 'github' | 'gitlab'): string {
-  return value === 'gitlab'
-    ? '/settings/organization/git?provider=gitlab'
-    : '/settings/organization/git';
-}
+/**
+ * The provider Segmented stays on THIS route and changes a search param.
+ *
+ * ⚠️ A RECORD, NOT A FUNCTION. `ProviderSwitch` is a client component and this
+ * page is a Server Component; React refuses a function across that boundary
+ * (*"Functions cannot be passed directly to Client Components"*), and the first
+ * cut of this page passed one and threw at RENDER time — caught by the
+ * acceptance walk, not by the type checker.
+ */
+const PROVIDER_HREFS = {
+  github: '/settings/organization/git',
+  gitlab: '/settings/organization/git?provider=gitlab',
+} as const;
