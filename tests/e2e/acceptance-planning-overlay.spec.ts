@@ -54,7 +54,14 @@ test.describe.configure({ timeout: 180_000 });
 /** The workspace's own dialog — the shipped `Modal`, so a real `role=dialog`. */
 const workspace = (page: Page) => page.getByRole('dialog', { name: /plan/i });
 const rail = (page: Page) => page.getByRole('complementary', { name: 'Motir AI' });
-const canvas = (page: Page) => page.getByTestId('roadmap-canvas');
+// ⚠️ SCOPED TO THE DIALOG. An overlay leaves the host page MOUNTED underneath,
+// so over a page that draws its own canvas (`/roadmap`) an unscoped testid
+// resolves twice and Playwright's strict mode refuses it — the locator hazard
+// `motir-core/CLAUDE.md` records for a route-group boundary, in the shape an
+// overlay gives it. `/backlog` has no canvas, so this file would pass either
+// way; it is scoped so that pointing a chapter at another host page later is not
+// a trap. (`planning-anchor-level.spec.ts` is where it actually bit.)
+const canvas = (page: Page) => workspace(page).getByTestId('roadmap-canvas');
 const composer = (page: Page) => page.getByRole('textbox', { name: /Reply, or refine/ });
 /** The exit chrome. A BUTTON labelled `Close` since MOTIR-4729 — an overlay has
  *  no destination to name, which is what `Back to …` was doing. */
@@ -440,7 +447,7 @@ test('a work-item launch opens scoped to that item, over its own page', async ({
   await expect(target).toBeVisible();
   await expect(target).toContainText(seed.subtaskTitle);
   await expect(
-    page.getByTestId('planning-canvas').locator('[data-node-id]').filter({
+    workspace(page).getByTestId('planning-canvas').locator('[data-node-id]').filter({
       hasText: seed.siblingTitle,
     }),
   ).toBeVisible();
