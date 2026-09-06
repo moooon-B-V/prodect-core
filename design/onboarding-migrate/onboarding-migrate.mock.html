@@ -3167,6 +3167,275 @@
           </p>
         </div>
       </div>
+      <div class="panel-label">
+        Panel 6 · The PLANNER-DECIDED step set — a rail SHORTER than the full one, and what the user
+        is told about the steps that are not in it
+        <b
+          >(NEW · MOTIR-4766 · the verdict is MOTIR-4767's, the rendering is MOTIR-4759's · reuses
+          Panel 5's SATISFIED treatment)</b
+        >
+      </div>
+      <div class="panel">
+        <p class="muted-note" style="margin: 0 0 14px">
+          Panel 5 gave a step that did not run its own state.
+          <strong>This panel is what happens when SEVERAL of them do not run.</strong> The planner
+          now returns which steps to KEEP (MOTIR-4767), so the rail a user meets is shorter than the
+          full one — and the failure to avoid is the one Panel 5 was written for, at scale: three
+          rows that quietly disappear read as three things taken away, and a rail of four
+          <em>satisfied</em> rows beside one live step reads as a list of things the user did not
+          do.
+          <strong
+            >So the steps that are not kept COLLAPSE INTO ONE ROW, in Panel 5's own treatment, and
+            that row names them.</strong
+          >
+          The rail gets shorter; nothing vanishes.
+        </p>
+        <div class="triptych">
+          <div>
+            <div class="state-cap">The FULL set — nothing to read, so nothing collapses</div>
+            <nav class="rail rail-mini" aria-label="Migration steps">
+              <div class="rail-title">Your migration</div>
+              <div class="rail-sub">Four questions about your direction.</div>
+              <div class="rail-group">Set up your codebase</div>
+              <div class="step upcoming">
+                <span class="marker">1</span
+                ><span
+                  ><span class="s-name">Connect</span
+                  ><span class="s-meta">Nothing connected yet</span></span
+                >
+              </div>
+              <div class="step upcoming">
+                <span class="marker">2</span><span><span class="s-name">Index</span></span>
+              </div>
+              <div class="rail-group">Import your work <span class="opt">optional</span></div>
+              <div class="step optional">
+                <span class="marker" aria-hidden="true"
+                  ><svg
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="2"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                  >
+                    <path d="M12 3v13" />
+                    <path d="m7 12 5 4 5-4" />
+                    <path d="M5 21h14" /></svg></span
+                ><span
+                  ><span class="s-name">Import work items</span
+                  ><span class="s-meta">Optional</span></span
+                >
+              </div>
+              <div class="rail-group">Your direction</div>
+              <div class="step current" aria-current="step">
+                <span class="marker" aria-hidden="true"
+                  ><svg
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="2.5"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                  >
+                    <path d="M9.1 9a3 3 0 0 1 5.8 1c0 2-3 3-3 3" />
+                    <path d="M12 17h.01" /></svg></span
+                ><span
+                  ><span class="s-name">A few questions</span
+                  ><span class="s-meta">What you're building, and who for</span></span
+                >
+              </div>
+            </nav>
+            <p class="muted-note" style="margin-top: 9px">
+              The floor, unchanged from Panel 5.
+              <strong>No repository and no backlog means the planner keeps everything</strong>, so
+              there is nothing to collapse and no summary row — the rail a user meets here is
+              exactly the rail that shipped.
+            </p>
+          </div>
+          <div>
+            <div class="state-cap">Planner kept ONE — three steps collapse</div>
+            <nav class="rail rail-mini" aria-label="Migration steps">
+              <div class="rail-title">Your migration</div>
+              <div class="rail-sub">Two questions — everything else is already here.</div>
+              <div class="rail-group">Already answered by your project</div>
+              <div class="step satisfied">
+                <span class="marker" aria-hidden="true"
+                  ><svg
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="2"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                  >
+                    <path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z" />
+                    <path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z" /></svg></span
+                ><span
+                  ><span class="s-name">Connect, Index and Import</span
+                  ><span class="s-meta">Read from acme/widgets and your 214 work items</span></span
+                >
+              </div>
+              <div class="rail-group">Your direction</div>
+              <div class="step current" aria-current="step">
+                <span class="marker" aria-hidden="true"
+                  ><svg
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="2.5"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                  >
+                    <path d="M9.1 9a3 3 0 0 1 5.8 1c0 2-3 3-3 3" />
+                    <path d="M12 17h.01" /></svg></span
+                ><span
+                  ><span class="s-name">A few questions</span
+                  ><span class="s-meta">What you're building, and who for</span></span
+                >
+              </div>
+            </nav>
+            <p class="muted-note" style="margin-top: 9px">
+              <strong>ONE row, and it says the three names.</strong> The group heading is the
+              sentence — <em>Already answered by your project</em> — and the meta line says WHAT
+              answered them, which is the same claim the provenance line makes at the end of the
+              flow. Panel 5's sky tint and read glyph, unchanged; no second visual language for the
+              same fact.
+            </p>
+          </div>
+          <div>
+            <div class="state-cap">Planner kept TWO — the set is a JUDGEMENT, not a rank</div>
+            <nav class="rail rail-mini" aria-label="Migration steps">
+              <div class="rail-title">Your migration</div>
+              <div class="rail-sub">Bring your backlog over, then two questions.</div>
+              <div class="rail-group">Already answered by your project</div>
+              <div class="step satisfied">
+                <span class="marker" aria-hidden="true"
+                  ><svg
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="2"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                  >
+                    <path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z" />
+                    <path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z" /></svg></span
+                ><span
+                  ><span class="s-name">Connect and Index</span
+                  ><span class="s-meta">Read from acme/widgets</span></span
+                >
+              </div>
+              <div class="rail-group">Import your work <span class="opt">optional</span></div>
+              <div class="step current" aria-current="step">
+                <span class="marker" aria-hidden="true"
+                  ><svg
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="2"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                  >
+                    <path d="M12 3v13" />
+                    <path d="m7 12 5 4 5-4" />
+                    <path d="M5 21h14" /></svg></span
+                ><span
+                  ><span class="s-name">Import work items</span
+                  ><span class="s-meta">Nothing in the backlog yet</span></span
+                >
+              </div>
+              <div class="rail-group">Your direction</div>
+              <div class="step upcoming">
+                <span class="marker">2</span
+                ><span
+                  ><span class="s-name">A few questions</span
+                  ><span class="s-meta">What you're building, and who for</span></span
+                >
+              </div>
+            </nav>
+            <p class="muted-note" style="margin-top: 9px">
+              A repository that is real but thin.
+              <strong>Connect and Index are satisfied and Import is not</strong> — so the kept set
+              is not a prefix, a suffix or a count, and the rail must render whatever the planner
+              returns rather than <em>the last N steps</em>. The collapsed row can therefore sit
+              above a live step it does not precede in the shipped order.
+            </p>
+          </div>
+        </div>
+
+        <div class="states-grid" style="margin-top: 22px">
+          <div>
+            <div class="state-cap">What the user is told at the end — the same provenance line</div>
+            <div class="card" style="padding: 16px">
+              <div class="step-eyebrow">Your plan is ready</div>
+              <h3 style="margin: 4px 0 10px; font-size: 16px">42 work items, across 6 epics</h3>
+              <div class="provenance">
+                <svg
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="2"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                >
+                  <circle cx="12" cy="12" r="10" />
+                  <path d="M12 16v-4" />
+                  <path d="M12 8h.01" />
+                </svg>
+                <span
+                  >Motir planned from <b>acme/widgets</b> and <b>214 imported work items</b>, and
+                  from the two answers you gave. <b>Connect, Index and Import</b> were already
+                  answered by your project, so it did not ask you about them. Everything below is a
+                  proposal — change anything before you add it.</span
+                >
+              </div>
+              <div style="display: flex; gap: 10px; margin-top: 14px">
+                <button class="btn primary sm" type="button">Review the plan</button>
+                <button class="btn ghost sm" type="button">Answer the questions anyway</button>
+              </div>
+            </div>
+            <p class="muted-note" style="margin-top: 9px">
+              <strong>The line grows by one clause and gains no new mechanism.</strong> Panel 5's
+              provenance line already said what Motir planned FROM; a shortened rail adds the second
+              half of the same sentence — which steps that reading stood in for. It stays a
+              STATEMENT: the escape back to the questions is the same button, and the flow does not
+              wait on it.
+            </p>
+          </div>
+          <div>
+            <div class="state-cap">The rules this panel is holding itself to</div>
+            <div class="card soft" style="padding: 16px">
+              <p class="muted-note" style="margin: 0">
+                <strong>1 · A step that is not kept is COLLAPSED, never deleted.</strong> Deleting
+                is the confusion Panel 5 exists to prevent, and it gets worse rather than better as
+                more steps go: a user who came in expecting a wizard and meets two rows has no way
+                to tell whether Motir skipped the rest or lost them.
+              </p>
+              <p class="muted-note" style="margin: 10px 0 0">
+                <strong>2 · One collapsed row, not N satisfied rows.</strong> Panel 5's single
+                <em>Answered from your project</em> row is right for ONE step. Four of them beside
+                one live step is a rail whose subject is what the user did not do — the opposite of
+                what a shorter set is for.
+              </p>
+              <p class="muted-note" style="margin: 10px 0 0">
+                <strong>3 · No row here names a tier.</strong>
+                <em>A few questions</em> and <em>Your direction</em>, exactly as MOTIR-4755 revision
+                2 settled it. <span class="code">discovery</span> /
+                <span class="code">vision</span> / <span class="code">feasibility</span> /
+                <span class="code">validation</span> are the identifiers a kept-step set travels as
+                (MOTIR-4767 validates against them) — and they stay identifiers.
+              </p>
+              <p class="muted-note" style="margin: 10px 0 0">
+                <strong>4 · The rail renders the verdict; it does not audit it.</strong> No count,
+                no threshold and no re-derivation from the substrate decides what is drawn here
+                (MOTIR-4769's own boundary). A kept step the wizard does not have is refused
+                upstream, so the rail never has to draw one.
+              </p>
+            </div>
+          </div>
+        </div>
+      </div>
+
       <p class="muted-note" style="max-width: 1120px; margin: 14px auto 0">
         Every step persists its result — including <strong>per-repo index status</strong> and
         per-repo convention approval (MOTIR-1499's <span class="code">MigrateOnboarding</span> state

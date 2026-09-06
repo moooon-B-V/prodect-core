@@ -658,3 +658,96 @@ entirely from tokens the asset already declares: `--el-tint-sky`, `--el-muted`, 
 `--el-text-strong`, `--el-text-secondary`, and the shape tokens `--radius-card` / `--radius-control` /
 `--radius-badge`. **No raw hex, no Tier-0 `--color-*`, no raw `rounded-*` / `p-*` / `h-*` on a
 surface's own box.**
+
+---
+
+## AMENDMENT (2026-09-06 · MOTIR-4766) — the PLANNER-DECIDED step set: a rail SHORTER than the full one
+
+**Panel 6 of `onboarding-migrate.mock.html`.** MOTIR-4755 (the amendment above) gave ONE step that
+did not run its own state. This amendment is what happens when SEVERAL of them do not run, because
+the planner now returns which steps to KEEP.
+
+### Where each depicted behaviour comes from (grounding, not invention)
+
+| Behaviour drawn                                                  | Grounded in                                                                                                              |
+| ---------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------ |
+| The kept-step set exists at all, and is the PLANNER's answer     | **MOTIR-4767** — the routing verdict. On `onboard_existing_project` it carries THE KEPT STEPS and WHAT IS MISSING.       |
+| The set travels to the wizard with the move                      | **MOTIR-4769** — "carrying the KEPT STEPS and the missing-list… `motir-core` does not second-guess the verdict."         |
+| The wizard renders exactly that set                              | **MOTIR-4759** — `discovery` becomes a SATISFIABLE step; the run records which way it went.                              |
+| A step may be satisfied by the substrate rather than by the user | **MOTIR-4755** (the amendment above) — the `satisfied` state, its sky tint and its read glyph. Reused here, not redrawn. |
+| A kept step naming something the wizard does not have is refused | **MOTIR-4767 AC6** — validated upstream, so the rail never has to draw one.                                              |
+
+### The decision — COLLAPSE, do not delete
+
+The failure this panel is avoiding is MOTIR-4755's, at scale. That amendment established that a step
+which silently vanishes reads as something taken from the user. With one step, the remedy was to
+give the row its own state. **With three, giving each of them a `satisfied` row produces the
+opposite problem**: a rail whose subject is the list of things the user did not do, sitting beside
+the one thing they did.
+
+So the steps that are not kept **collapse into ONE row, in the `satisfied` treatment, and that row
+names them**:
+
+```
+YOUR DIRECTION                         →  ALREADY ANSWERED BY YOUR PROJECT
+                                          [read] Connect, Index and Import
+                                                 Read from acme/widgets and your 214 work items
+```
+
+The rail gets shorter; nothing vanishes. The group heading carries the sentence (_Already answered by
+your project_) and the meta line says WHAT answered it — the same claim the provenance line makes at
+the end of the flow, so the two cannot drift.
+
+### Three states drawn, and why each is needed
+
+1. **The FULL set** — no repository and no backlog, so the planner keeps everything and there is
+   nothing to collapse. The rail is exactly the one that shipped. This is the floor, unchanged from
+   MOTIR-4755's Panel 5, and it is here so the shortened rails have something to be shorter THAN.
+2. **Planner kept ONE** — three steps collapse into a single row; `A few questions` is the only live
+   step.
+3. **Planner kept TWO** — a repository that is real but thin. **Connect and Index are satisfied and
+   Import is not**, so the collapsed row sits ABOVE a live step it does not precede in the shipped
+   step order. This case is drawn deliberately: it is the proof that the kept set is **not a prefix,
+   a suffix or a count**, so the rail must render whatever the planner returns rather than "the last
+   N steps".
+
+### What the user is told at the end
+
+The provenance line from MOTIR-4755 gains **one clause and no new mechanism**:
+
+> Motir planned from **acme/widgets** and **214 imported work items**, and from the two answers you
+> gave. **Connect, Index and Import** were already answered by your project, so it did not ask you
+> about them. Everything below is a proposal — change anything before you add it.
+
+It stays a STATEMENT, not a gate: the escape back to the interview is the same
+_Answer the questions anyway_ button, and the flow does not wait on it.
+
+### The four rules this panel holds itself to
+
+1. **A step that is not kept is COLLAPSED, never deleted.**
+2. **One collapsed row, not N satisfied rows** — the single-row treatment is right for one step and
+   wrong for four.
+3. **No row names a tier.** `discovery` / `vision` / `feasibility` / `validation` are the identifiers
+   a kept-step set travels as (MOTIR-4767 validates against them) and they stay identifiers; the
+   rail says _A few questions_ and _Your direction_, exactly as MOTIR-4755 revision 2 settled after
+   Yue's note. **No string in this panel contains "Pre-plan".**
+4. **The rail renders the verdict; it does not audit it.** No count, no threshold and no
+   re-derivation from the substrate decides what is drawn (MOTIR-4769's own boundary).
+
+### Primitives and tokens (nothing new)
+
+`Rail` / `RailStep` as shipped in `app/(onboarding)/onboarding/migrate/_components/MigrateWizard.tsx`
+— the `.step` / `.marker` / `.s-name` / `.s-meta` structure, the `.rail-group` heading with its
+`.opt` chip, and the `.step.satisfied` / `.step.current` / `.step.upcoming` / `.step.optional`
+states. Panel 6 adds **no class, no colour and no shape token**: it is `--el-tint-sky` +
+`--el-text-strong` + `--el-border` on the collapsed marker (the `satisfied` recipe verbatim),
+`--el-surface` / `--el-surface-soft` / `--el-card` grounds, `--el-text-secondary` for every meta and
+annotation line, and `--radius-card` / `--radius-control` / `--radius-badge` for shape. No raw hex,
+no Tier-0 `--color-*`, no raw `rounded-*` / `p-*` / `h-*` on a surface's own box.
+
+### The other half of this design lives in `design/ai-chat/`
+
+The hand-off that SENDS a user here — and shows them the kept set before they commit to it — is
+`design/ai-chat/reading-and-handoff.mock.html` Panel 4, published under the same card. The two
+assets share the `satisfied` vocabulary on purpose: the chip strip in the hand-off and the collapsed
+row in the rail are the same fact, said once before the journey and once during it.
