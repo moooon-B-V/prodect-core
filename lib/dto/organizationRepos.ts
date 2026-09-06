@@ -65,3 +65,38 @@ export interface OrgRepoUsageDto {
   /** The projects the VIEWER may browse that hold this repository. */
   projects: UsingProjectDto[];
 }
+
+/**
+ * WHAT MOTIR KNOWS ABOUT A REPOSITORY'S CODE INDEX — and it is deliberately two
+ * values, not the four the design draws (Story MOTIR-4669 · MOTIR-4680).
+ *
+ * ⚠️ `stale` AND `indexing` ARE ABSENT BECAUSE THEY HAVE NO PRODUCER, not because
+ * they were forgotten. Both were measured against `origin/main` and both are
+ * blocked by properties the owning code documents about ITSELF:
+ *
+ *   - **stale** needs the indexed commit compared against the default-branch
+ *     head. `prisma/schema.prisma` carries NEITHER column.
+ *     `jobRunRepository.listSucceededCodeGraphIndexRepoRefs` says so in its own
+ *     words: *"Staleness (graph commit vs the default-branch head) is
+ *     MOTIR-1754/1766's axis and deliberately not read here."*
+ *   - **indexing** is NOT ATTRIBUTABLE. `findRunningCodeGraphIndexForWorkspace`
+ *     says it: *"a `running` row has no `output.repoRef` … so the ledger cannot
+ *     say WHICH repo a running row belongs to — only that one is in flight."*
+ *     `FleetInFlightSlot.ref` is the index-RUN id, not a repository.
+ *
+ * Rendering `Current` for a repository whose graph may be months behind would
+ * tell a person their index matches their code at the exact moment they are
+ * deciding whether to trust a plan built from it. That is not a missing feature;
+ * it is a wrong answer. So this union says only what is known — `indexed` claims
+ * an index HAPPENED, never that it is current — and the two missing arms arrive
+ * with their substrate.
+ */
+export type OrgRepoIndexStateDto = 'indexed' | 'never';
+
+/** One row of the organisation's repository inventory (MOTIR-4680). */
+export interface OrgRepoInventoryRowDto {
+  repo: OrgRepoOptionDto;
+  /** The projects the VIEWER may browse that hold it — count IS the list length. */
+  projects: UsingProjectDto[];
+  indexState: OrgRepoIndexStateDto;
+}

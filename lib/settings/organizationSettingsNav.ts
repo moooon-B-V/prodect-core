@@ -1,4 +1,4 @@
-import { Building2, Coins, CreditCard, ShieldCheck, Users } from 'lucide-react';
+import { Building2, Coins, CreditCard, GitBranch, ShieldCheck, Users } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 
 // The ORGANISATION-settings navigation REGISTRY (Story MOTIR-4669 · MOTIR-4710).
@@ -35,16 +35,15 @@ import type { LucideIcon } from 'lucide-react';
 // had none to reconcile with. Wiring this one means retiring those two actions
 // in the same change.
 //
-// ── ⚠️ WHERE IS THE `Git` ROW? ──────────────────────────────────────────────
-// Panel 7 draws `Git` in the `general` group and it is NOT here, deliberately.
-// `/settings/organization/git` does not exist yet — MOTIR-4680 builds it — and
-// `accountSettingsNav.ts` records what happens when a row is added ahead of its
-// pane: the "reserved slot" mechanism it used for three entries was RETIRED
-// (MOTIR-4324) once the last one flipped, leaving a flag, a rail branch and a
-// filter unreachable from the product. Every account row since has landed in the
-// SAME COMMIT as its route, which keeps the totality test green by construction.
-// MOTIR-4680 adds the `Git` entry beside its page. This card builds the room the
-// row will hang in, not a row pointing at a corridor.
+// ── THE `Git` ROW ARRIVED WITH ITS PAGE (MOTIR-4680) ────────────────────────
+// MOTIR-4710 built this registry deliberately WITHOUT it, because
+// `/settings/organization/git` did not exist yet and `accountSettingsNav.ts`
+// records what happens when a row precedes its pane: the "reserved slot"
+// mechanism was RETIRED (MOTIR-4324) once the last one flipped, leaving a flag, a
+// rail branch and a filter unreachable from the product. MOTIR-4680 added the
+// entry in the SAME COMMIT as the page, which is what keeps the route↔registry
+// totality test green by construction — the move every account row since has
+// made.
 //
 // ── ⚠️ WHAT THIS REGISTRY DOES *NOT* DECIDE ─────────────────────────────────
 // Nothing moves. The four existing sub-routes become rows and the index becomes
@@ -158,6 +157,27 @@ export const ORGANIZATION_SETTINGS_NAV: OrganizationSettingsNavEntry[] = [
     // alternative surface anywhere in the product. Hiding the row would close the
     // only route to it, which is precisely the defect §6d was written to repair.
     // The page keeps gating PER SECTION; the row is the door to the page.
+  },
+  {
+    id: 'git',
+    group: 'general',
+    href: '/settings/organization/git',
+    icon: GitBranch,
+    labelKey: 'git',
+    // ⚠️ NOT `orgAdminOnly`, and §6 of `docs/decisions/organization-tier.md` is
+    // why: "a hidden tier may not remove a capability … relocating a surface
+    // preserves its gate." The surface this page relocates FROM,
+    // `/settings/workspace/github`, checks a session and a workspace context and
+    // NO ROLE AT ALL — every workspace member reads it today, and every workspace
+    // member is an org member by §5's upward invariant. Admin-gating the row
+    // would have taken a shipped capability away silently.
+    //
+    // The owner/admin gate lives on the page's WRITE controls instead, and in the
+    // service beneath them (`organizationRepoService.disconnectFromOrganisation`).
+    //
+    // `general`, beside `Organisation`, for the reason the project rail puts
+    // `repositories` there: it is the tenant's own resources, not a permission
+    // and not money.
   },
   {
     id: 'members',

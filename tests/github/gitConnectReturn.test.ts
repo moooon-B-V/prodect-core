@@ -15,6 +15,7 @@ import { adminDb } from '../helpers/adminDb';
 // STARTED IT.
 //
 // Both round trips used to land on a hard-coded `/settings/workspace/github`,
+// an address MOTIR-4680 has since retired to a permanent redirect —
 // because that page was the only place either could begin. Once a connect starts
 // in a project's Repositories room or on the organisation's Git page, a person
 // connects a repository and is dropped on a settings page they never asked for.
@@ -191,8 +192,13 @@ describe('the banner is ONE declaration, rendered by every returning surface', (
   // The failure this guards is not a missing banner — it is a SECOND banner
   // implementation on the surface that gained one, disagreeing with the first
   // about what an outcome means.
+  // ⚠️ THE FIRST ENTRY MOVED A TIER (MOTIR-4680). `/settings/workspace/github` is
+  // gone — the connect surface is the ORGANISATION's now, and the old address is a
+  // permanent redirect. The list is the set of surfaces a flow can RETURN to, and
+  // the account pane (MOTIR-4682) joined it when the member's own credential moved
+  // down; every one of them renders the same banner through the same declaration.
   const SURFACE_PAGES = [
-    'app/(authed)/settings/workspace/github/page.tsx',
+    'app/(authed)/settings/organization/git/page.tsx',
     'app/(authed)/settings/project/repositories/page.tsx',
   ] as const;
 

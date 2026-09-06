@@ -3552,6 +3552,7 @@
           "billing": "Billing"
         },
         "organization": "Organisation",
+        "git": "Git",
         "members": "Members",
         "security": "Security",
         "usage": "Usage & cost",
@@ -6190,6 +6191,31 @@
       "title": "Remove {repo} from {project}?",
       "body": "Removes it from {project} only. It stays connected to your organisation, other projects keep it, and the code index is untouched.",
       "confirm": "Remove"
+    },
+    "inventory": {
+      "title": "Repositories",
+      "caption": "Every repository connected to this organisation. Any project can pick one; the index is built once and shared.",
+      "foot": "A repository no project uses stays connected and stays indexed — the next project that adds it pays nothing.",
+      "empty": "No repositories are connected yet. Add one from a project’s Repositories settings.",
+      "provider": {
+        "github": "GitHub",
+        "gitlab": "GitLab"
+      },
+      "index": {
+        "indexed": "Indexed",
+        "never": "Never indexed"
+      },
+      "usedBy": "{count, plural, one {Used by # project} other {Used by # projects}}",
+      "usedByNone": "Used by no project yet",
+      "usedByExpanded": "Projects working on this repository"
+    },
+    "organization": {
+      "subtitle": "Connect {org} to GitHub or GitLab once. Every project in the organisation can then work on a connected repository — picking one never indexes it again.",
+      "connectionTitle": "Organisation connection",
+      "connectedBy": "Installed by @{login} on {date}",
+      "notConnected": "{org} is not connected to a git host yet.",
+      "adminOnly": "Only owners and admins of {org} can connect or disconnect a git host.",
+      "subtitleGeneric": "Connect your organisation to GitHub or GitLab once. Every project in the organisation can then work on a connected repository — picking one never indexes it again."
     }
   },
   "aiPlanning": {

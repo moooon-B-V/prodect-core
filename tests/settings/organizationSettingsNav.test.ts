@@ -51,23 +51,23 @@ describe('organizationSettingsNav — totality (route ↔ entry, mistake #29)', 
     expect(registryRoutes).toEqual(fsRoutes);
   });
 
-  it('⚠️ `/settings/organization/git` is NOT here yet — MOTIR-4680 adds it WITH its route', () => {
-    // The design (`design/org-admin/org-admin.mock.html` panel 7) draws a `Git`
-    // row in the `general` group. It is deliberately absent until its page
-    // exists, and this case is what says so out loud rather than leaving the gap
-    // looking like an oversight.
+  it('⚠️ the `Git` row arrived WITH its route (MOTIR-4680), and is NOT admin-gated', () => {
+    // MOTIR-4710 shipped this registry deliberately WITHOUT this row, and a case
+    // here said so — because `accountSettingsNav.ts` records what a row that
+    // precedes its pane costs: the "reserved slot" mechanism was RETIRED
+    // (MOTIR-4324) after the last one flipped, leaving a flag, a rail branch and a
+    // filter unreachable from the product. That case has done its job and is
+    // REPLACED by this one rather than deleted, so the reasoning survives its
+    // occasion.
     //
-    // `accountSettingsNav.ts` records the reason: the "reserved slot" mechanism
-    // that let a row precede its pane was RETIRED (MOTIR-4324) once the last slot
-    // flipped, because it left a flag, a rail branch and a filter unreachable from
-    // the product. Every row since has landed in the same commit as its route,
-    // which keeps the assertion above green BY CONSTRUCTION.
-    //
-    // This case deletes itself in that commit.
-    expect(ORGANIZATION_SETTINGS_NAV.map((e) => e.id)).not.toContain('git');
-    expect(ORGANIZATION_SETTINGS_ROUTES.map((e) => e.href)).not.toContain(
-      '/settings/organization/git',
-    );
+    // ⚠️ The gate is the substantive half. §6 of `organization-tier.md`: "a
+    // hidden tier may not remove a capability … relocating a surface preserves
+    // its gate." `/settings/workspace/github` checks NO role, so the ROW is
+    // org-membership-gated and owner/admin lives on the page's write controls.
+    const git = ORGANIZATION_SETTINGS_NAV.find((e) => e.id === 'git');
+    expect(git?.href).toBe('/settings/organization/git');
+    expect(git?.group).toBe('general');
+    expect(git?.orgAdminOnly).toBeUndefined();
   });
 
   it('has no duplicate hrefs and no duplicate ids', () => {
@@ -91,10 +91,10 @@ describe('the two FILTER AXES — what the actor holds, and what this build has'
 
   it('an org ADMIN on cloud sees every row', () => {
     const ids = visibleOrganizationSettingsNav(ADMIN, undefined, CLOUD).map((e) => e.id);
-    expect(ids).toEqual(['organization', 'members', 'security', 'usage', 'billing']);
+    expect(ids).toEqual(['organization', 'git', 'members', 'security', 'usage', 'billing']);
   });
 
-  it('a PLAIN org member sees only `Organisation` — and that row is not optional', () => {
+  it('a PLAIN org member sees `Organisation` AND `Git` — neither is optional', () => {
     // The row that must survive, and the reason it carries no admin flag: below
     // the workspace-tier reveal the index page hosts the FOLDED-IN workspace
     // sections (`organization-tier.md` §6d), and a workspace invitee reaches
@@ -102,8 +102,10 @@ describe('the two FILTER AXES — what the actor holds, and what this build has'
     // anywhere in the product — only through it. Hiding this row closes the only
     // route to a capability, which is exactly the defect §6d was written to
     // repair.
+    // `Git` is here for §6's reason (see the registry entry); `Organisation` for
+    // §6d's, below.
     const ids = visibleOrganizationSettingsNav(MEMBER, undefined, CLOUD).map((e) => e.id);
-    expect(ids).toEqual(['organization']);
+    expect(ids).toEqual(['organization', 'git']);
   });
 
   it('`Billing & plans` is ABSENT off cloud, and `Usage & cost` is not', () => {
@@ -119,7 +121,7 @@ describe('the two FILTER AXES — what the actor holds, and what this build has'
     // The property that makes a missing prop safe. `visibleSettingsNav` on the
     // project registry defaults closed for the same reason: a surface that forgets
     // the availability flag must drop the row, never offer a door onto a corridor.
-    expect(visibleOrganizationSettingsNav().map((e) => e.id)).toEqual(['organization']);
+    expect(visibleOrganizationSettingsNav().map((e) => e.id)).toEqual(['organization', 'git']);
   });
 });
 

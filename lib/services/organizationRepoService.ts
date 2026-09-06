@@ -11,10 +11,17 @@ import { assertOrgAdmin, assertOrgMember } from '@/lib/services/organizationAcce
 import { githubInstallationService } from '@/lib/services/githubInstallationService';
 import { codeGraphOffboardingService } from '@/lib/services/codeGraphOffboardingService';
 import { projectRepository } from '@/lib/repositories/projectRepository';
+import { jobRunRepository } from '@/lib/repositories/jobRunRepository';
+import { workspaceRepository } from '@/lib/repositories/workspaceRepository';
 import { withSystemContext } from '@/lib/workspaces/context';
 import { toProjectRepoDto } from '@/lib/mappers/projectRepoMappers';
 import { toOrgRepoOptionDto, toUsingProjectDto } from '@/lib/mappers/organizationRepoMappers';
-import type { OrgRepoOptionDto, OrgRepoUsageDto } from '@/lib/dto/organizationRepos';
+import type {
+  OrgRepoIndexStateDto,
+  OrgRepoInventoryRowDto,
+  OrgRepoOptionDto,
+  OrgRepoUsageDto,
+} from '@/lib/dto/organizationRepos';
 import type { ProjectRepoDto } from '@/lib/dto/projectRepos';
 import { SEED_SOURCE_ORGANIZATION } from '@/lib/projectRepos/vocabulary';
 import {
@@ -207,6 +214,65 @@ export const organizationRepoService = {
         .filter((p): p is NonNullable<typeof p> => !!p)
         .map(toUsingProjectDto),
     }));
+  },
+
+  /**
+   * THE ORGANISATION'S REPOSITORY INVENTORY — one row per connected repository,
+   * with who uses it and what Motir knows about its index (MOTIR-4680).
+   *
+   * Composes {@link listRepositoryUsage} rather than re-deriving it, so the count
+   * the inventory row draws and the names the disconnect dialog enumerates are
+   * literally the same list. ONE read, both consumers, which is the whole
+   * disclosure argument: a dialog computing its own could disagree with the row a
+   * person had been looking at all week.
+   *
+   * ⚠️ THE INDEX STATE IS TWO VALUES, AND THE MISSING TWO ARE A MEASUREMENT
+   * rather than an omission — see {@link OrgRepoIndexStateDto}. `indexed` claims
+   * an index HAPPENED; it does not claim the graph is current, because nothing in
+   * motir-core can answer that yet.
+   *
+   * The ledger is workspace-keyed and this is an organisation, so the refs are
+   * gathered per workspace under system context — the same read
+   * `codeGraphOffboardingService` performs on the same table for the same reason.
+   */
+  async listInventory(ctx: ServiceContext): Promise<OrgRepoInventoryRowDto[]> {
+    const usage = await organizationRepoService.listRepositoryUsage(ctx);
+    if (usage.length === 0) return [];
+
+    const organizationId = await withWorkspaceContext(
+      { userId: ctx.userId, workspaceId: ctx.workspaceId },
+      (tx) => resolveOrganizationId(ctx.workspaceId, tx),
+    );
+
+    const indexedRefs = await withSystemContext(async (tx) => {
+      const workspaces = await workspaceRepository.listByOrganization(organizationId, tx);
+      const refs = new Set<string>();
+      for (const workspace of workspaces) {
+        for (const ref of await jobRunRepository.listSucceededCodeGraphIndexRepoRefs(
+          workspace.id,
+          tx,
+        )) {
+          refs.add(ref);
+        }
+      }
+      return refs;
+    });
+
+    const repos = await withWorkspaceContext(
+      { userId: ctx.userId, workspaceId: ctx.workspaceId },
+      async (tx) => {
+        await bindOrganizationContext(tx, organizationId);
+        return githubRepoRepository.listByOrganization(organizationId, tx);
+      },
+    );
+    const byId = new Map(repos.map((r) => [r.id, r]));
+
+    return usage.flatMap((row) => {
+      const repo = byId.get(row.githubRepoId);
+      if (!repo) return [];
+      const indexState: OrgRepoIndexStateDto = indexedRefs.has(row.repoRef) ? 'indexed' : 'never';
+      return [{ repo: toOrgRepoOptionDto(repo), projects: row.projects, indexState }];
+    });
   },
 
   /**

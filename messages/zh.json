@@ -3552,6 +3552,7 @@
           "billing": "账单"
         },
         "organization": "组织",
+        "git": "Git",
         "members": "成员",
         "security": "安全",
         "usage": "用量与费用",
@@ -6186,6 +6187,31 @@
       "title": "确定将 {repo} 从 {project} 中移除？",
       "body": "仅从 {project} 中移除。它仍与你的组织保持连接，其他项目继续保留，代码索引不受影响。",
       "confirm": "移除"
+    },
+    "inventory": {
+      "title": "仓库",
+      "caption": "连接到该组织的全部仓库。任何项目都可以挑选使用；索引只构建一次并共享。",
+      "foot": "没有项目使用的仓库仍保持连接与索引——下一个添加它的项目无需付出任何代价。",
+      "empty": "尚未连接任何仓库。请在某个项目的「仓库」设置中添加。",
+      "provider": {
+        "github": "GitHub",
+        "gitlab": "GitLab"
+      },
+      "index": {
+        "indexed": "已建立索引",
+        "never": "从未建立索引"
+      },
+      "usedBy": "{count, plural, other {# 个项目在使用}}",
+      "usedByNone": "暂无项目使用",
+      "usedByExpanded": "正在使用该仓库的项目"
+    },
+    "organization": {
+      "subtitle": "将 {org} 与 GitHub 或 GitLab 连接一次。此后组织中的任何项目都可以使用已连接的仓库——挑选它们不会重新建立索引。",
+      "connectionTitle": "组织连接",
+      "connectedBy": "由 @{login} 于 {date} 安装",
+      "notConnected": "{org} 尚未连接任何 Git 平台。",
+      "adminOnly": "只有 {org} 的所有者和管理员可以连接或断开 Git 平台。",
+      "subtitleGeneric": "将你的组织与 GitHub 或 GitLab 连接一次。此后组织中的任何项目都可以使用已连接的仓库——挑选它们不会重新建立索引。"
     }
   },
   "aiPlanning": {

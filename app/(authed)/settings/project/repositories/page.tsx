@@ -12,6 +12,7 @@ import { summarizeRepositories } from '@/lib/projectRepos/roomSections';
 import { GitConnectBanner } from '@/components/settings/GitConnectBanner';
 import { RepositoriesRoom } from './_components/RepositoriesRoom';
 import { guardSettingsPage } from '../_guard';
+import { allSettledOrThrow } from '@/lib/async/allSettledOrThrow';
 import { isOrgAdminForWorkspace } from '@/lib/services/organizationAccessService';
 import { organizationsService } from '@/lib/services/organizationsService';
 
@@ -144,7 +145,10 @@ async function RepositoriesPaneBody({
   // `organizationRepoService`'s `assertOrgAdmin`, inside the transaction that
   // performs the add — this only decides which affordance is drawn, which is why
   // it returns a boolean rather than throwing.
-  const [view, canAddRepositories, organization] = await Promise.all([
+  // `allSettledOrThrow`, never a bare `Promise.all` (MOTIR-3066): each arm opens
+  // its own transaction, and `Promise.all` abandons the others' connections on the
+  // first rejection rather than letting them settle.
+  const [view, canAddRepositories, organization] = await allSettledOrThrow([
     projectRepoRoomService.getRoomView(projectId, { userId, workspaceId }),
     isOrgAdminForWorkspace(userId, workspaceId),
     organizationsService.resolveActiveOrganization(userId, null),

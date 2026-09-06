@@ -161,6 +161,18 @@ const ORG_SWEEP: Record<string, { tables: string[]; source: 'scan' | 'hand'; why
       'adds attachment_org_service_read and workspace_org_service_read, FOR SELECT, each ' +
       'guarded on app.user_id being empty so it fires only for the userless service path.',
   },
+  'lib/services/organizationRepoService.ts#listInventory': {
+    tables: ['github_repo'],
+    source: 'scan',
+    why:
+      "THE SIXTEENTH (MOTIR-4680) — the organisation Git page's one read. It COMPOSES " +
+      '`listRepositoryUsage` (adjudicated below, and where the `project_repository` arm is ' +
+      'accounted for) and binds the org GUC once more of its own to re-read `github_repo` for ' +
+      'the row fields the usage shape does not carry. github_repo_org_read (MOTIR-4677) is the ' +
+      'arm. ⚠️ The INDEX-ledger half is deliberately NOT here: `job_run` is read under ' +
+      '`withSystemContext`, per workspace, because the ledger is workspace-keyed and an ' +
+      "organisation is not — that is the system-context guard's axis, not this one.",
+  },
   'lib/services/organizationRepoService.ts#listRepositoryUsage': {
     tables: ['github_repo', 'project_repository'],
     source: 'scan',
