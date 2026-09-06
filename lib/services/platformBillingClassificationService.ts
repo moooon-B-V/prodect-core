@@ -2,9 +2,11 @@ import 'server-only';
 
 import type {
   PlatformOrganizationDetailDTO,
+  PlatformOrganizationPageDTO,
   PlatformOrganizationSummaryDTO,
 } from '@/lib/dto/platform';
 import {
+  toPlatformAuditLogDTO,
   toPlatformOrganizationDetailDTO,
   toPlatformOrganizationSummaryDTO,
 } from '@/lib/mappers/platformMappers';
@@ -14,7 +16,9 @@ import {
   PlatformClassificationStateError,
   PlatformOrganizationNotFoundError,
 } from '@/lib/platform/errors';
+import { platformAuditLogRepository } from '@/lib/repositories/platformAuditLogRepository';
 import { platformOrganizationRepository } from '@/lib/repositories/platformOrganizationRepository';
+import { isPlatformAuditAction, reasonPolicyFor } from '@/lib/platform/auditActions';
 import { assertReasonSatisfied } from '@/lib/services/platformAuditService';
 
 /**
@@ -86,6 +90,28 @@ export const PLATFORM_ORG_SEARCH_LIMIT = 20;
  */
 export const PLATFORM_ORG_SEARCH_MIN_LENGTH = 2;
 
+/** How many audit rows the org page reads before filtering to the writes. */
+const PLATFORM_ORG_ACTION_LOG_LIMIT = 50;
+
+/**
+ * Is this row an operator WRITE, as the page's log means the word?
+ *
+ * ⚠️ THE DISCRIMINATOR IS THE REASON POLICY, NOT A LIST OF ACTION NAMES —
+ * `platformSupportService`'s rule, and it is quoted rather than re-derived
+ * because a second copy would drift. The ADR requires a stated reason for every
+ * write and forbids one on every read (§3b), so `reason: 'required'` IS "this
+ * action changed something"; a hard-coded list would need editing every time a
+ * later story adds a verb, with the log silently omitting the new one.
+ *
+ * A row whose action THIS BUILD does not recognise is EXCLUDED: the column is a
+ * `String`, so a newer deploy can write a member this build has never heard of,
+ * and excluding it under-reports where including it would assert that a write
+ * happened on the strength of not recognising the name.
+ */
+function isOperatorWrite(row: { action: string }): boolean {
+  return isPlatformAuditAction(row.action) && reasonPolicyFor(row.action) === 'required';
+}
+
 export const platformBillingClassificationService = {
   /**
    * Find organizations by name or slug.
@@ -138,6 +164,50 @@ export const platformBillingClassificationService = {
     );
 
     return toPlatformOrganizationDetailDTO(row);
+  },
+
+  /**
+   * The whole ORG PAGE — the organization AND every operator write on it.
+   *
+   * ONE method returning both, so the page costs ONE platform transaction and
+   * writes ONE audit row. Two methods would write two rows per page view and put
+   * the trail's own noise floor above the actions it exists to record — the
+   * argument `getUserPage` makes, and the reason this is not two calls from the
+   * page.
+   *
+   * ⚠️ THE TRAIL IS WHAT MAKES THE CONTROL HONEST (MOTIR-4568 criterion 4). The
+   * console's standing line is that *"an operator can never perform an action and
+   * wonder whether it was recorded"*, and the way to keep it is to render the row
+   * the write just produced on the surface that produced it. A control whose
+   * record lived on some other screen would be a promise of accountability that
+   * is decoration.
+   */
+  async getOrganizationPage(
+    principal: PlatformPrincipal,
+    organizationId: string,
+  ): Promise<PlatformOrganizationPageDTO> {
+    await requirePlatformStaff('support');
+
+    const result = await withPlatformRead(
+      principal,
+      { action: 'estate.read', targetKind: 'organization', targetId: organizationId },
+      async (tx) => {
+        const row = await platformOrganizationRepository.findOrganizationById(organizationId, tx);
+        if (!row) throw new PlatformOrganizationNotFoundError(organizationId);
+        const trail = await platformAuditLogRepository.listByTarget(
+          'organization',
+          organizationId,
+          PLATFORM_ORG_ACTION_LOG_LIMIT,
+          tx,
+        );
+        return { row, trail };
+      },
+    );
+
+    return {
+      organization: toPlatformOrganizationDetailDTO(result.row),
+      actions: result.trail.filter(isOperatorWrite).map(toPlatformAuditLogDTO),
+    };
   },
 
   /**

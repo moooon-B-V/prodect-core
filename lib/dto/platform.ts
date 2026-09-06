@@ -147,3 +147,22 @@ export interface PlatformOrganizationDetailDTO extends PlatformOrganizationSumma
   /** Whether a scaled-tracker (per-seat PM) subscription is on record. */
   hasScaledTrackerSubscription: boolean;
 }
+
+/**
+ * The operator ORG PAGE's whole payload (MOTIR-4566 / MOTIR-4568, design
+ * Panels 11 and 12).
+ *
+ * One shape rather than two calls, because the page's two halves are ONE audited
+ * read: the organization, and every operator write on it. See
+ * `platformBillingClassificationService.getOrganizationPage` for why that matters
+ * to the trail — two calls would write two audit rows per page view.
+ */
+export interface PlatformOrganizationPageDTO {
+  organization: PlatformOrganizationDetailDTO;
+  /**
+   * Every operator WRITE on this organization, newest first. Reads are filtered
+   * out by the service — this is the log the design calls *"every operator write
+   * on this organization"*, and a page view is not one.
+   */
+  actions: PlatformAuditLogDTO[];
+}

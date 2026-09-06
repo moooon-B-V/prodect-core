@@ -7432,6 +7432,43 @@
         "jobsTitle": "Recent jobs",
         "jobsEmptyTitle": "Not built yet",
         "broughtBy": "This panel is {owner}’s. It is drawn as a reserved region rather than a placeholder figure — a zero here would look like an answer."
+      },
+      "action": {
+        "classify": "Classify as internal billing",
+        "unclassify": "Remove internal classification",
+        "classified": "Classified as internal billing",
+        "unclassified": "Internal classification removed",
+        "failedTitle": "Couldn’t update the classification",
+        "readOnlyNotice": "Changing an organization’s billing classification needs superadmin standing. Your account can read this page and not act on it.",
+        "error": {
+          "REASON_REQUIRED": "A reason is required — it is what makes the record readable later.",
+          "NOT_FOUND": "That organization no longer exists.",
+          "ALREADY_IN_STATE": "No change made — the organization is already in that state. Another operator may have just changed it; reload to see where it stands.",
+          "NOT_PERMITTED": "Your account cannot change a billing classification.",
+          "FAILED": "The change was not applied and nothing was recorded. Try again."
+        }
+      },
+      "confirm": {
+        "reasonLabel": "Reason — required, written to the audit log",
+        "reasonHint": "Shown to any operator reading this organization later. “Internal” on its own answers nothing.",
+        "cancel": "Cancel",
+        "classify": {
+          "title": "Classify {name} as internal billing?",
+          "body": "Every AI debit this organization incurs will be paired, in the same transaction, with an offsetting credit — so it is charged exactly like a customer and its balance nets to zero. Both entries stay visible. This changes no rate, lifts no cap and touches no Stripe object, and another operator can remove it.",
+          "confirm": "Classify as internal"
+        },
+        "unclassify": {
+          "title": "Remove {name}’s internal classification?",
+          "body": "New debits stop being offset from now on, so the organization’s balance falls like any customer’s. Every ledger row already written stays exactly where it is — the flag governs what happens next, not what happened.",
+          "confirm": "Remove classification"
+        }
+      },
+      "log": {
+        "title": "Platform actions on this organization",
+        "scope": "This organization",
+        "emptyTitle": "No operator writes yet",
+        "emptyDescription": "Every classification change appears here, with who made it and why. Reads are not actions and are not listed.",
+        "noReason": "No reason recorded"
       }
     }
   },
