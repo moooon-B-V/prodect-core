@@ -2581,7 +2581,8 @@
         "appearance": "外观",
         "twoFactor": "两步验证",
         "apiTokens": "令牌",
-        "data": "数据与隐私"
+        "data": "数据与隐私",
+        "gitAccounts": "Git 账户"
       },
       "data": {
         "title": "数据与隐私",
@@ -3555,6 +3556,27 @@
         "security": "安全",
         "usage": "用量与费用",
         "billing": "账单与套餐"
+      }
+    },
+    "gitAccounts": {
+      "heading": "Git 账户",
+      "subtitle": "你用来署名工作的 Git 账户。它属于你，而非你的组织——没有人能代你连接它。",
+      "host": {
+        "github": "GitHub"
+      },
+      "state": {
+        "connected": "已连接"
+      },
+      "connectedOn": "连接于 {date}",
+      "connect": "连接 GitHub",
+      "disconnect": "断开连接",
+      "empty": {
+        "title": "尚未连接 Git 账户",
+        "description": "连接后，Motir 可以把你邀请到项目所使用的仓库，并为你的工作署名。它只读取你的公开资料——不会获得任何代码的访问权限。"
+      },
+      "noInstallation": {
+        "title": "你的账户已连接，你的组织尚未连接。",
+        "body": "这是一个正常状态，而不是问题——两者相互独立。将组织连接到 Git 平台是组织管理员的操作，位于「设置 → 组织 → Git」。"
       }
     }
   },
