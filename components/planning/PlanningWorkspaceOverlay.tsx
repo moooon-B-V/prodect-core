@@ -8,7 +8,14 @@ import { NoAccessState } from '@/components/projects/NoAccessState';
 import { PlanningWorkspaceHost } from '@/components/planning/PlanningWorkspaceHost';
 import { PlanningWorkspaceSkeleton } from '@/components/planning/PlanningWorkspaceSkeleton';
 import { useProjectAccess } from '@/app/(authed)/_components/ProjectAccessProvider';
-import { parsePlanningOverlay, withoutPlanningOverlay } from '@/lib/planning/launcher';
+import {
+  parsePlanningOverlay,
+  withoutPlanningOverlay,
+  withPlanningOverlay,
+  OVERLAY_PARAM_NAMES,
+  type PlanningLaunch,
+  type PlanningLaunchContext,
+} from '@/lib/planning/launcher';
 import { resolvePlanningHostGate } from '@/lib/planning/workspaceHost';
 import { fetchPlanningAnchor } from '@/lib/planning/planningAnchorClient';
 import { shallowPush } from '@/lib/navigation/shallowUrl';
@@ -116,7 +123,22 @@ export function PlanningWorkspaceOverlay({
   const searchParams = useSearchParams();
   const { can } = useProjectAccess();
 
-  const launch = useMemo(() => parsePlanningOverlay(searchParams), [searchParams]);
+  // The host's veto (MOTIR-4731) — see `requestClose`.
+  const closeGuardRef = useRef<(() => boolean) | null>(null);
+
+  // ⚠️ BROWSER BACK IS THE VECTOR THAT HAS ALREADY HAPPENED. Every other close
+  // can be intercepted BEFORE anything changes; a history pop cannot — by the
+  // time the overlay notices, the address no longer carries the workspace. So
+  // when a pop takes the overlay out of the address while the host vetoes, the
+  // launch is HELD: the dialog stays mounted with the guard up, over an address
+  // that already says closed, and *Keep planning* re-pushes it.
+  // (`design/ai-chat/design-notes.md` § *Opening & exiting* → the guard's vector
+  // table.) *Discard* and *Confirm & add* let the pop stand.
+  const [heldLaunch, setHeldLaunch] = useState<PlanningLaunch | null>(null);
+
+  const addressLaunch = useMemo(() => parsePlanningOverlay(searchParams), [searchParams]);
+  // The address decides, EXCEPT while a vetoed history pop is being answered.
+  const launch = addressLaunch ?? heldLaunch;
   const open = launch !== null;
   const anchorKey = launch?.itemKey ?? null;
 
@@ -161,8 +183,49 @@ export function PlanningWorkspaceOverlay({
    * (`CLAUDE.md` § *URL state the CLIENT reads is written with `shallowPush`*).
    */
   const requestClose = useCallback(() => {
+    // ⚠️ THE HOST MAY VETO (MOTIR-4731). It writes a predicate into this ref: a
+    // `false` means it has raised the close-with-pending guard and the workspace
+    // must stay. Every vector runs through here, so the guard is asked exactly
+    // once per close attempt and there is no vector it can miss.
+    if (closeGuardRef.current && !closeGuardRef.current()) return;
+    setHeldLaunch(null);
     shallowPush(withoutPlanningOverlay(currentHref));
   }, [currentHref]);
+
+  // ⚠️ THE POP HOLD. `popstate` fires AFTER the browser has already navigated,
+  // so this reads the address as it now stands: if the overlay has left it and
+  // the host vetoes, the launch is held and the guard asks over a workspace
+  // whose address already says closed. Registered as a real listener rather than
+  // derived, because a pop is an EVENT and setting state from an event handler
+  // is exactly what React allows (deriving it in an effect body is the
+  // cascading render `react-hooks/set-state-in-effect` forbids).
+  const launchRef = useRef<PlanningLaunch | null>(null);
+  useEffect(() => {
+    launchRef.current = launch;
+  }, [launch]);
+  useEffect(() => {
+    function onPopState() {
+      if (new URLSearchParams(window.location.search).has(OVERLAY_PARAM_NAMES.mode)) return;
+      const leaving = launchRef.current;
+      if (!leaving) return;
+      if (!closeGuardRef.current || closeGuardRef.current()) return;
+      setHeldLaunch(leaving);
+    }
+    window.addEventListener('popstate', onPopState);
+    return () => window.removeEventListener('popstate', onPopState);
+  }, []);
+
+  /**
+   * *Keep planning*, after a Back. The pop has happened, so the workspace is only
+   * on screen because it is HELD — put its address back with ONE `shallowPush`
+   * so Back means what it says again, and release the hold.
+   */
+  const keepPlanningAfterBack = useCallback(() => {
+    const held = heldLaunch;
+    if (!held) return;
+    setHeldLaunch(null);
+    shallowPush(withPlanningOverlay(currentHref, launchContext(held)));
+  }, [heldLaunch, currentHref]);
 
   // ── THE GATE ───────────────────────────────────────────────────────────────
   // `no-project` cannot occur: the mount itself is behind `Boolean(activeProject)`
@@ -285,6 +348,8 @@ export function PlanningWorkspaceOverlay({
           launch={launch}
           anchorId={settled?.target?.id ?? null}
           onClose={requestClose}
+          closeGuardRef={closeGuardRef}
+          onKeepPlanningAfterBack={keepPlanningAfterBack}
           // Named by the permission its own server gate asserts, not by a rank:
           // `auditCoverageService.getCoverage` asserts `ai:configure`, so that is
           // what decides whether the banner is an invitation or a 403.
@@ -295,4 +360,25 @@ export function PlanningWorkspaceOverlay({
       )}
     </Modal>
   );
+}
+
+/**
+ * A parsed launch back as the CONTEXT that produced it — what
+ * `withPlanningOverlay` needs to re-write the address after a vetoed Back.
+ *
+ * The mode is not carried: it is DERIVED from the context by
+ * `resolvePlanningMode`, and a launch that came from a door round-trips exactly.
+ * The one lossy case is `hasPlan`, which the address never carried either — a
+ * `replan` launch re-pushes as its coarse origin, and the workspace it re-opens
+ * is the one already on screen, so nothing the reader can see changes.
+ */
+function launchContext(launch: PlanningLaunch): PlanningLaunchContext {
+  if (launch.from === 'work-item' && launch.itemKey) {
+    return { kind: 'work-item', itemKey: launch.itemKey, hasPlan: launch.mode === 'replan' };
+  }
+  if (launch.from === 'convention-refine' && launch.repoKey) {
+    return { kind: 'convention-refine', repoKey: launch.repoKey };
+  }
+  if (launch.from === 'roadmap') return { kind: 'roadmap' };
+  return { kind: 'project', hasPlan: launch.mode === 'replan' ? true : undefined };
 }

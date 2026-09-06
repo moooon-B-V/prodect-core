@@ -6207,6 +6207,13 @@
     "noProjectDescription": "Pick or create a project from the switcher to plan with Motir AI.",
     "canvasAria": "{project} plan",
     "close": "Close",
+    "closeGuard": {
+      "title": "Add the {count, plural, one {# proposed work item} other {# proposed work items}} before closing?",
+      "body": "Nothing is saved until you confirm. Closing now discards them.",
+      "discard": "Discard {count} proposed",
+      "keepPlanning": "Keep planning",
+      "confirm": "Confirm & add"
+    },
     "escKey": "Esc",
     "emptyCanvasTitle": "Nothing on the canvas yet",
     "emptyCanvasDescription": "This project has no work items to draw. Add one by hand, or plan the first tree from the roadmap.",

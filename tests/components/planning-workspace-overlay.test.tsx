@@ -1,5 +1,5 @@
 // @vitest-environment happy-dom
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { act, cleanup, fireEvent, screen } from '@testing-library/react';
 import { renderWithIntl as render } from '../helpers/renderWithIntl';
@@ -50,6 +50,8 @@ vi.mock('@/app/(authed)/_components/ProjectAccessProvider', () => ({
 // the keyed-remount contract is about. Counting RENDERS instead would report a
 // remount on every re-render and prove nothing.
 let mountSeq = 0;
+/** Stands in for "the host has a pending proposal and raised its guard". */
+let vetoClose = false;
 vi.mock('@/components/planning/PlanningWorkspaceHost', () => ({
   PlanningWorkspaceHost: ({
     launch,
@@ -58,6 +60,8 @@ vi.mock('@/components/planning/PlanningWorkspaceHost', () => ({
     initialTarget,
     initialCanvasTrail,
     onClose,
+    closeGuardRef,
+    onKeepPlanningAfterBack,
   }: {
     launch: { mode: string; from: string; itemKey: string | null };
     anchorId: string | null;
@@ -65,8 +69,19 @@ vi.mock('@/components/planning/PlanningWorkspaceHost', () => ({
     initialTarget?: { identifier: string } | null;
     initialCanvasTrail?: readonly { id: string }[];
     onClose?: () => void;
+    closeGuardRef?: { current: (() => boolean) | null };
+    onKeepPlanningAfterBack?: () => void;
   }) => {
     const [mountId] = useState(() => ++mountSeq);
+    // The host registers the close VETO (MOTIR-4731). `vetoClose` lets a test
+    // stand in for "there is a pending proposal" without a conversation.
+    useEffect(() => {
+      if (!closeGuardRef) return;
+      closeGuardRef.current = () => !vetoClose;
+      return () => {
+        closeGuardRef.current = null;
+      };
+    });
     return (
       <div
         data-testid="host"
@@ -80,6 +95,9 @@ vi.mock('@/components/planning/PlanningWorkspaceHost', () => ({
       >
         <button type="button" onClick={onClose}>
           Close
+        </button>
+        <button type="button" onClick={onKeepPlanningAfterBack}>
+          Keep planning
         </button>
       </div>
     );
@@ -111,6 +129,7 @@ beforeEach(() => {
   fetchPlanningAnchor.mockResolvedValue(ANCHOR);
   granted = new Set(['project:browse']);
   mountSeq = 0;
+  vetoClose = false;
 });
 afterEach(cleanup);
 
@@ -416,5 +435,98 @@ describe('the GATES the route ran on the server', () => {
     mount();
     await act(async () => {});
     expect(screen.getByTestId('host').getAttribute('data-can-manage')).toBe('true');
+  });
+});
+
+describe('the host may VETO a close (the pending guard’s seam, MOTIR-4731)', () => {
+  it('writes nothing when the host refuses', async () => {
+    vetoClose = true;
+    openAt('plan=project&planFrom=project');
+    mount();
+    await act(async () => {});
+
+    fireEvent.click(screen.getByRole('button', { name: 'Close' }));
+
+    // The address is untouched, so the workspace is still open and the guard —
+    // rendered by the host — is what the reader is answering.
+    expect(shallowPush).not.toHaveBeenCalled();
+    expect(screen.getByTestId('host')).toBeTruthy();
+  });
+
+  it('HOLDS the workspace up after a browser Back the host refuses', async () => {
+    vetoClose = true;
+    openAt('plan=project&planFrom=project');
+    const view = mount();
+    await act(async () => {});
+
+    // Back: the browser has already navigated by the time `popstate` fires, so
+    // the overlay reads an address that no longer carries it.
+    window.history.pushState(null, '', '/backlog');
+    params = new URLSearchParams('');
+    await act(async () => {
+      window.dispatchEvent(new PopStateEvent('popstate'));
+    });
+    view.rerender(
+      <PlanningWorkspaceOverlay
+        projectKey="ACME"
+        projectName="Acme"
+        onboardingRanAt="2026-01-01T00:00:00.000Z"
+      />,
+    );
+    await act(async () => {});
+
+    // Still mounted — the guard needs a workspace to ask over.
+    expect(screen.getByTestId('host')).toBeTruthy();
+    expect(shallowPush).not.toHaveBeenCalled();
+  });
+
+  it('KEEP PLANNING after a Back puts the address back, with ONE write', async () => {
+    vetoClose = true;
+    openAt('plan=replan&planFrom=roadmap', '/roadmap');
+    const view = mount();
+    await act(async () => {});
+
+    window.history.pushState(null, '', '/roadmap');
+    params = new URLSearchParams('');
+    await act(async () => {
+      window.dispatchEvent(new PopStateEvent('popstate'));
+    });
+    view.rerender(
+      <PlanningWorkspaceOverlay
+        projectKey="ACME"
+        projectName="Acme"
+        onboardingRanAt="2026-01-01T00:00:00.000Z"
+      />,
+    );
+    await act(async () => {});
+
+    fireEvent.click(screen.getByRole('button', { name: 'Keep planning' }));
+
+    // ONE `shallowPush`, so Back means what it says again rather than needing
+    // two presses.
+    expect(shallowPush).toHaveBeenCalledTimes(1);
+    expect(shallowPush.mock.calls[0]![0]).toBe('/roadmap?plan=roadmap&planFrom=roadmap');
+  });
+
+  it('a Back the host ALLOWS just closes — no hold, no write', async () => {
+    openAt('plan=project&planFrom=project');
+    const view = mount();
+    await act(async () => {});
+
+    params = new URLSearchParams('');
+    await act(async () => {
+      window.dispatchEvent(new PopStateEvent('popstate'));
+    });
+    view.rerender(
+      <PlanningWorkspaceOverlay
+        projectKey="ACME"
+        projectName="Acme"
+        onboardingRanAt="2026-01-01T00:00:00.000Z"
+      />,
+    );
+    await act(async () => {});
+
+    expect(screen.queryByTestId('host')).toBeNull();
+    expect(shallowPush).not.toHaveBeenCalled();
   });
 });

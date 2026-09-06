@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState, type RefObject } from 'react';
 import { useRouter } from 'next/navigation';
 import { useTranslations } from 'next-intl';
 import { Map, X } from 'lucide-react';
@@ -11,8 +11,10 @@ import { PlanChangeCanvas } from '@/components/planning/PlanChangeCanvas';
 import { PlanningCanvasSkeleton } from '@/components/planning/PlanningWorkspaceSkeleton';
 import { PlanChangeConfirmBar } from '@/components/planning/PlanChangeConfirmBar';
 import { PlanChangeRail } from '@/components/planning/PlanChangeRail';
+import { PlanCloseGuard } from '@/components/planning/PlanCloseGuard';
 import { usePlanChangeConversation } from '@/lib/hooks/usePlanChangeConversation';
 import { indexPlanReview } from '@/lib/planning/planChangeDiff';
+import { isProposalPending, pendingProposalCount } from '@/lib/planning/planPending';
 import {
   addPlanningTarget,
   removePlanningTarget,
@@ -118,6 +120,26 @@ export interface PlanningWorkspaceHostProps {
    *  which is the `(planning)` page and nothing else; deleted with it by
    *  MOTIR-4732. */
   backHref?: string;
+  /**
+   * A slot the OVERLAY hands down so this host can VETO a close (MOTIR-4731).
+   *
+   * The overlay routes Close, `Esc`, the scrim and Back's `popstate` through one
+   * `requestClose()` — but the thing that decides whether closing is safe is the
+   * conversation state, which lives HERE. So the host writes a predicate into
+   * this ref: `true` means *go ahead*, `false` means *I have raised the guard,
+   * do not close*. That keeps the seam in one place and the state in one place,
+   * with a single function between them.
+   *
+   * Absent for the `(planning)` route, which has no guard and never had one.
+   */
+  closeGuardRef?: RefObject<(() => boolean) | null>;
+  /**
+   * *Keep planning* was chosen after a browser BACK — the one vector that has
+   * already happened by the time the guard can ask, so the address no longer
+   * says *open*. The overlay puts it back; the host cannot, because it does not
+   * know the launch context.
+   */
+  onKeepPlanningAfterBack?: () => void;
   /** The work item the Plan / Re-plan entrance opened on, resolved server-side
    *  (MOTIR-1491): it is the PRE-FILLED initial target. Null for a project-scoped
    *  launch — or when the `?item=` key no longer resolves. */
@@ -142,6 +164,8 @@ export function PlanningWorkspaceHost({
   launch,
   anchorId = null,
   onClose,
+  closeGuardRef,
+  onKeepPlanningAfterBack,
   backHref,
   initialTarget = null,
   initialCanvasTrail,
@@ -163,13 +187,55 @@ export function PlanningWorkspaceHost({
     [],
   );
 
+  // ── THE CLOSE, AND THE ONE QUESTION IT MAY ASK (MOTIR-4731) ───────────────
+  //
+  // `onClose` is the overlay's `requestClose` — the seam every close vector
+  // converges on; `backHref` is the retiring page's navigation, kept only
+  // because a Server Component cannot pass a callback (MOTIR-4732 removes it).
+  const [guardOpen, setGuardOpen] = useState(false);
+  // Set while a decision THE GUARD took is closing the workspace, so the veto
+  // lets that close through. Without it the guard would answer its own question:
+  // both decisions are server writes, so the proposal is still pending at the
+  // moment *Discard* or *Confirm & add* asks to close.
+  const bypassRef = useRef(false);
+
+  const performClose = useCallback(() => {
+    if (onClose) {
+      onClose();
+      return;
+    }
+    if (backHref) router.push(backHref);
+  }, [onClose, backHref, router]);
+
+  const closeBypassingGuard = useCallback(() => {
+    bypassRef.current = true;
+    try {
+      performClose();
+    } finally {
+      bypassRef.current = false;
+    }
+  }, [performClose]);
+
+  const close = performClose;
+
   // Bumped on every approve: the committed tree is new data, so the canvas island
   // must refetch its level (the server-rendered surfaces take the refresh below).
   const [treeVersion, setTreeVersion] = useState(0);
+  // ⚠️ *Confirm & add* CLOSES FROM HERE, not from the `await` (MOTIR-4731). This
+  // callback fires on a SUCCESSFUL approve and on nothing else, so it is the one
+  // place that knows the write landed — reading `state.decided` after the await
+  // would race the re-render that sets it. A FAILED approve simply never reaches
+  // here, which leaves the guard up with the conversation's own error: the one
+  // case where closing would lose the thing the reader was trying to save.
+  const closeAfterApproveRef = useRef(false);
   const onApproved = useCallback(() => {
     setTreeVersion((v) => v + 1);
     router.refresh();
-  }, [router]);
+    if (!closeAfterApproveRef.current) return;
+    closeAfterApproveRef.current = false;
+    setGuardOpen(false);
+    closeBypassingGuard();
+  }, [router, closeBypassingGuard]);
   const { state, send, retry, correctTurn, approve, discard, stop } = usePlanChangeConversation({
     onApproved,
     anchorId,
@@ -184,16 +250,69 @@ export function PlanningWorkspaceHost({
   // One key for "what the canvas is drawing": a new proposal, or a fresh commit.
   const diffKey = `${treeVersion}:${state.jobId ?? 'none'}:${state.decided ?? 'pending'}:${index.counts.added}-${index.counts.changed}-${index.counts.removed}`;
 
-  // The one close. `onClose` is the overlay's `requestClose` — the seam the
-  // pending guard wraps; `backHref` is the retiring page's navigation, kept only
-  // because a Server Component cannot pass a callback (MOTIR-4732 removes it).
-  const close = useCallback(() => {
-    if (onClose) {
-      onClose();
-      return;
-    }
-    if (backHref) router.push(backHref);
-  }, [onClose, backHref, router]);
+  // THE PREDICATE, from `lib/planning/planPending.ts` — the SAME expression that
+  // used to sit inline in the footer slot below, moved into a module so the bar
+  // and the guard cannot come to disagree about whether anything is at stake.
+  const pending = isProposalPending(state, index);
+  const pendingCount = pendingProposalCount(index);
+  const deciding = state.phase === 'deciding';
+
+  // The VETO the overlay consults. Writing it into a ref rather than passing a
+  // boolean up keeps the decision here, next to the state it reads, and keeps
+  // the overlay's `requestClose` a single function with a single caller shape.
+  useEffect(() => {
+    if (!closeGuardRef) return;
+    closeGuardRef.current = () => {
+      if (bypassRef.current) return true;
+      if (!pending) return true;
+      setGuardOpen(true);
+      return false;
+    };
+    return () => {
+      closeGuardRef.current = null;
+    };
+  }, [closeGuardRef, pending]);
+
+  // ⚠️ TWO VECTORS ARE DELIBERATELY NOT GUARDED, and the design says why
+  // (`design/ai-chat/design-notes.md` § *Opening & exiting* → *The
+  // CLOSE-WITH-PENDING guard*, the vector table):
+  //
+  //   · A RELOAD or a TAB CLOSE gets no `beforeunload`. A browser's own "leave
+  //     site?" dialog cannot carry these three actions, so it would be a strictly
+  //     worse version of this one — and it fires on every reload whether or not
+  //     there is anything to lose.
+  //   · A STREAMING TURN is not guarded. The predicate needs a `review`, and a
+  //     stream has none yet, so there is no proposal to lose; closing calls the
+  //     conversation's `stop` and the turn is abandoned, which is exactly what
+  //     navigating away from the route did.
+  //
+  // Both are the ABSENCE of code, which is why they are written down: an absence
+  // reads as an oversight unless somebody says it was chosen.
+
+  // ⚠️ *Keep planning* is also what `Esc` and the scrim mean ON THE GUARD: the
+  // safe answer is the one that loses nothing. After a browser BACK the address
+  // has already dropped the overlay, so the overlay puts it back.
+  const keepPlanning = useCallback(() => {
+    closeAfterApproveRef.current = false;
+    setGuardOpen(false);
+    onKeepPlanningAfterBack?.();
+  }, [onKeepPlanningAfterBack]);
+
+  const discardAndClose = useCallback(() => {
+    void (async () => {
+      await discard();
+      setGuardOpen(false);
+      closeBypassingGuard();
+    })();
+  }, [discard, closeBypassingGuard]);
+
+  // Arms the close and starts the write. Never closes with the approve IN
+  // FLIGHT: every action is disabled while `deciding`, and the close happens in
+  // `onApproved` above — which fires on success and on nothing else.
+  const confirmAndClose = useCallback(() => {
+    closeAfterApproveRef.current = true;
+    void approve();
+  }, [approve]);
 
   // ⚠️ NO `Esc` LISTENER HERE. It was removed with the route (MOTIR-4729): the
   // dialog owns the key, and the handler that stood here — yielding to a focused
@@ -287,7 +406,7 @@ export function PlanningWorkspaceHost({
               so it never competes with the gate or reads as something to act on.
               Its second line is the ask's own promise made visible: an ask writes
               nothing, said at the one moment somebody might wonder. */}
-          {state.review && !state.decided && !index.isEmpty ? (
+          {pending ? (
             <PlanChangeConfirmBar
               index={index}
               deciding={state.phase === 'deciding'}
@@ -316,6 +435,19 @@ export function PlanningWorkspaceHost({
             </div>
           )}
         </div>
+      }
+      guard={
+        // THE CLOSE-WITH-PENDING GUARD (MOTIR-4731), over the whole workspace.
+        // Rendered HERE because the state it reads is here; raised by the VETO
+        // above, which the overlay's one `requestClose()` consults.
+        <PlanCloseGuard
+          open={guardOpen}
+          count={pendingCount}
+          deciding={deciding}
+          onKeepPlanning={keepPlanning}
+          onDiscard={discardAndClose}
+          onConfirm={confirmAndClose}
+        />
       }
       chat={
         <PlanChangeRail

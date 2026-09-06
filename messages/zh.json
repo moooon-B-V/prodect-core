@@ -6203,6 +6203,13 @@
     "noProjectDescription": "从切换器中选择或创建一个项目，即可用 Motir AI 规划。",
     "canvasAria": "{project} 的计划",
     "close": "关闭",
+    "closeGuard": {
+      "title": "关闭前先添加这 {count} 个提议的工作项？",
+      "body": "在你确认之前不会保存任何内容。现在关闭将丢弃它们。",
+      "discard": "丢弃 {count} 个提议",
+      "keepPlanning": "继续规划",
+      "confirm": "确认并添加"
+    },
     "escKey": "Esc",
     "emptyCanvasTitle": "画布上还没有内容",
     "emptyCanvasDescription": "该项目还没有可绘制的工作项。可以手动添加一个，或从路线图开始规划第一版计划。",
