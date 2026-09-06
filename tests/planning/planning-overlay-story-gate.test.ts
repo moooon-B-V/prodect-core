@@ -265,13 +265,35 @@ describe('guard · the abandoned path is GONE, and the forward is all that survi
   });
 });
 
-describe('guard · the overlay is mounted exactly ONCE, behind the AI gate', () => {
+describe('guard · the overlay is mounted exactly ONCE, and the DOOR is what the AI gate holds', () => {
   it('lives in the authed layout and nowhere else', () => {
     const layout = code('app/(authed)/layout.tsx');
     expect((layout.match(/<PlanningWorkspaceOverlay/g) ?? []).length).toBe(1);
-    // Behind the same gate the orb is behind — no project, no AI, no overlay.
+  });
+
+  it('⚠️ mounts on an ACTIVE PROJECT, not on `showPlanWithAi`', () => {
+    // This guard read `showPlanWithAi && activeProject` until
+    // `plan-change-planner-turn.spec.ts` went red in the AI-OFF main lane.
+    //
+    // The retired `app/(planning)/planning/page.tsx` gated on session, active
+    // project and `canBrowse` — never on `isMotirAiConfigured()` — so putting
+    // the overlay behind the ORB's gate narrowed a surface the story was only
+    // supposed to relocate, and made `/planning`'s forward land on a page where
+    // nothing mounts. What a reader sees on arrival is
+    // `resolvePlanningHostGate`'s answer, exactly as it was on the page.
+    const layout = code('app/(authed)/layout.tsx');
     const at = layout.indexOf('<PlanningWorkspaceOverlay');
-    expect(layout.slice(Math.max(0, at - 400), at)).toMatch(/showPlanWithAi && activeProject/);
+    const before = layout.slice(Math.max(0, at - 500), at);
+    expect(before).toMatch(/\{activeProject \? \(/);
+    expect(before).not.toMatch(/showPlanWithAi && activeProject/);
+  });
+
+  it('…and the DOOR is still held by it — the orb ships only where AI planning is wired', () => {
+    // The other half, asserted so that widening the MOUNT cannot be read as
+    // permission to widen the doors. A workspace with no motir-ai still offers
+    // nobody a way in; it only stops swallowing an address somebody already has.
+    const layout = code('app/(authed)/layout.tsx');
+    expect(layout).toMatch(/\{showPlanWithAi \? <PlanWithAIFab \/> : null\}/);
   });
 });
 
