@@ -15,7 +15,7 @@ function spend(over: Partial<SearchSpendDTO> = {}): SearchSpendDTO {
   return { totalSpend: 1204, monthSpend: 312, ...over };
 }
 
-const HEALTHY = { isMeta: false, balance: 4420 };
+const HEALTHY = { balance: 4420 };
 
 describe('searchLineFigures — the drawn states', () => {
   it('reports SPEND, carrying both figures verbatim from the DTO', () => {
@@ -72,21 +72,22 @@ describe('searchLineFigures — the drawn states', () => {
     expect(unavailable).not.toEqual(zero);
   });
 
-  // ── The META org (AC 3) ──────────────────────────────────────────────────────
-
-  it('renders NO line for the META org, even with real spend to show', () => {
-    // Not "a line reading zero" — the internal org is never billed, and a search
-    // figure beside three absent billed lines would be the only number on a page
-    // whose whole point is that none applies.
-    expect(searchLineFigures({ ...HEALTHY, isMeta: true, search: spend() })).toBeNull();
-    expect(searchLineFigures({ ...HEALTHY, isMeta: true, search: null })).toBeNull();
-  });
+  // ── ⚠️ THE META CASE IS DELETED WITH THE ARM IT TESTED (MOTIR-4572) ──────────
+  //
+  // It asserted that the META org rendered NO line, *"because the internal org
+  // is never billed and a search figure beside three absent billed lines would
+  // be the only number on a page whose whole point is that none applies."* That
+  // premise is what Story MOTIR-4337 removed: the other three lines are no
+  // longer absent, so this one is no longer alone, and an org classified
+  // `internalBilling` is charged exactly like a customer and made whole in the
+  // ledger. The line renders for every org, which is asserted by every case
+  // below now that none of them takes an `isMeta`.
 
   it('renders a NORMAL line for an org with no subscription', () => {
     // Search is charged per use with no plan to be on, so an unsubscribed cloud
     // org is not a not-applicable case — the same way §4.3 gives one a normal CI
     // line. `balance: 0` here is the unsubscribed org's real balance.
-    const f = searchLineFigures({ isMeta: false, balance: 0, search: spend() });
+    const f = searchLineFigures({ balance: 0, search: spend() });
     expect(f).not.toBeNull();
     expect(f!.variant).toBe('spend');
   });
@@ -96,7 +97,7 @@ describe('searchLineFigures — the drawn states', () => {
 
 describe('searchLineFigures — overdraft (motir-search-channel.md §5)', () => {
   it('flags overdraft at a zero balance while spend is still accruing', () => {
-    const f = searchLineFigures({ isMeta: false, balance: 0, search: spend({ monthSpend: 86 }) });
+    const f = searchLineFigures({ balance: 0, search: spend({ monthSpend: 86 }) });
     expect(f!.overdraft).toBe(true);
     // ⚠️ And it is STILL the spend variant — there is no paused/exhausted state
     // to fall into. Search refuses nothing.
@@ -104,7 +105,7 @@ describe('searchLineFigures — overdraft (motir-search-channel.md §5)', () => 
   });
 
   it('flags overdraft at a NEGATIVE balance — a debit that crossed zero applies in full', () => {
-    const f = searchLineFigures({ isMeta: false, balance: -12, search: spend({ monthSpend: 86 }) });
+    const f = searchLineFigures({ balance: -12, search: spend({ monthSpend: 86 }) });
     expect(f!.overdraft).toBe(true);
   });
 
@@ -115,7 +116,7 @@ describe('searchLineFigures — overdraft (motir-search-channel.md §5)', () => 
   it('does NOT flag overdraft when nothing was billed this month', () => {
     // A zero balance with no search spend has nothing to say about search. The
     // banner explains a charge that is still being made; there is no charge.
-    const f = searchLineFigures({ isMeta: false, balance: 0, search: spend({ monthSpend: 0 }) });
+    const f = searchLineFigures({ balance: 0, search: spend({ monthSpend: 0 }) });
     expect(f!.overdraft).toBe(false);
   });
 
@@ -124,7 +125,6 @@ describe('searchLineFigures — overdraft (motir-search-channel.md §5)', () => 
     // `balanceUnavailable` rule applied to the other side of the comparison.
     // Claiming overdraft off a missing number would assert exhaustion nobody saw.
     const f = searchLineFigures({
-      isMeta: false,
       balance: null,
       search: spend({ monthSpend: 86 }),
     });
@@ -134,7 +134,7 @@ describe('searchLineFigures — overdraft (motir-search-channel.md §5)', () => 
   it('does NOT flag overdraft while the FIGURES are unavailable', () => {
     // A banner beside an em-dash would assert something about spend this card
     // cannot see.
-    const f = searchLineFigures({ isMeta: false, balance: 0, search: null });
+    const f = searchLineFigures({ balance: 0, search: null });
     expect(f!.overdraft).toBe(false);
     expect(f!.figuresUnavailable).toBe(true);
   });

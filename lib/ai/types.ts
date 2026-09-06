@@ -89,6 +89,31 @@ export interface Tenant {
   // Propagated so motir-ai's credit gate (out-of-credits) bypasses it — the meta
   // org is never billed. Defaults to false for any non-meta / self-host caller.
   isMeta: boolean;
+  // Whether the org is charged exactly like a CUSTOMER and then made whole
+  // (`Organization.internalBilling`, MOTIR-4565). motir-ai pairs every debit
+  // such an org incurs with an offsetting `internal_offset` credit in the SAME
+  // transaction, so the balance nets to zero while both entries stay visible
+  // (`docs/decisions/internal-billing-classification.md` §2–§3).
+  //
+  // ⚠️ IT IS NOT `isMeta` ABOVE, AND IT IS ALMOST THE OPPOSITE OF IT. `isMeta`
+  // makes the far side SKIP a charge; this makes it charge in full and then
+  // credit. The two are true together on exactly one org today and that
+  // coincidence is not identity — §9.1 of `code-graph-index-fleet.md` warns in
+  // writing against overloading the first flag, which is why this is a second.
+  //
+  // ⚠️ OPTIONAL, AND THAT IS THE WIRE CONTRACT RATHER THAN A CONVENIENCE.
+  // Absent means `false`, and the consumer (motir-ai MOTIR-4569) parses it that
+  // way — which is what makes merge order between the two repositories FREE in
+  // both directions: an older motir-ai reading a newer envelope ignores the
+  // field, and a newer motir-ai reading an older one reads `false`. Typing it
+  // REQUIRED here would assert something stronger than the wire does, and would
+  // make an envelope built without it (an older caller, a fixture, a replayed
+  // payload) unrepresentable while it is in fact legal and correctly read.
+  //
+  // Every SHIPPED construction site sets it — `resolveTenantOrg` returns it
+  // non-optionally, so a site that has the org has the flag. The optionality is
+  // about what a RECEIVER must tolerate, not about what a producer may skip.
+  internalBilling?: boolean;
   workspaceId: string;
   projectId: string;
   projectKey: string;

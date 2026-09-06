@@ -5311,8 +5311,6 @@
       "monthlySpendSub": "全组织每月扣减的额度。最近 6 个月。",
       "creditsChip": "额度",
       "creditsUnit": "额度",
-      "unlimited": "无限制",
-      "internal": "内部",
       "searchThisMonth": "本月搜索花费",
       "searchAllTime": "累计 {n} 积分",
       "searchAttributed": "其中可归因",
@@ -5320,7 +5318,8 @@
       "searchUnavailable": "暂时无法获取搜索数据。你的搜索仍在正常计费——这是显示问题，不是计费问题。",
       "searchUnavailableValue": "暂无数据",
       "scopeFollows": "随当前范围变化",
-      "scopeOrg": "整个组织"
+      "scopeOrg": "整个组织",
+      "internalBilling": "内部计费"
     },
     "affordance": "额度是内部用量配额 —— 不是货币，这也不是账单。每次规划运行按其消耗的 token 扣减额度。购买更多额度与变更套餐将在后续版本随计费功能推出。",
     "drill": {
@@ -5515,15 +5514,6 @@
       "unavailableValue": "暂无数据",
       "viewRuns": "查看是哪些运行产生的"
     },
-    "internal": {
-      "badge": "内部",
-      "title": "内部组织",
-      "tagline": "Motir 自有工作区 —— 无限制，永不计费。",
-      "subtitle": "{org} 使用 Motir 内部方案。Motir 与 Motir AI 的所有功能均无限制，也无需计费 —— 本组织已豁免计费。",
-      "motirLine": "Motir · 无限制",
-      "aiLine": "Motir AI · 无限制",
-      "usageNote": "AI 用量仍会记录，便于在「用量与费用」页面查看内部成本。"
-    },
     "payment": {
       "title": "支付与发票",
       "portal": "Stripe 客户门户",
@@ -5678,6 +5668,10 @@
         "body": "在 {org} 组织升级套餐前，规划将保持暂停。只有组织所有者可以变更套餐或购买额度。",
         "askOwner": "请联系所有者升级"
       }
+    },
+    "internalBilling": {
+      "badge": "内部计费",
+      "note": "该组织与客户完全一样计费，随后被补偿——下方每个数字都是真实的，余额净额为零。"
     }
   },
   "draftWithAi": {
@@ -7182,7 +7176,6 @@
       "monitoring": "监控",
       "governance": "治理",
       "soonUsage": "10.1",
-      "soonTenants": "10.1",
       "soonGovernance": "10.3"
     },
     "topBar": {
@@ -7286,6 +7279,10 @@
             "password_reset_sent": "已发送密码重置",
             "suspend": "已停用",
             "unsuspend": "已解除停用"
+          },
+          "org": {
+            "internal_billing_set": "已标记为内部计费",
+            "internal_billing_unset": "已移除内部计费标记"
           }
         }
       }
@@ -7388,6 +7385,80 @@
         "colLastFired": "上次触发",
         "colExpected": "应触发于",
         "never": "从未"
+      }
+    },
+    "orgs": {
+      "breadcrumb": "平台 · 租户",
+      "breadcrumbAria": "面包屑导航",
+      "crumbPlatform": "平台",
+      "crumbTenants": "租户",
+      "title": "组织",
+      "subtitle": "按名称或标识查找组织。打开任一组织都会记录一次跨租户读取。",
+      "searchLabel": "名称或标识",
+      "searchPlaceholder": "moooon、acme、northwind…",
+      "searchSubmit": "搜索",
+      "tooShort": "请至少输入 {n} 个字符。",
+      "idleTitle": "搜索组织",
+      "idleDescription": "在上方输入名称或标识。最多显示 {n} 条；你打开的每一条都会记入审计日志。",
+      "noneTitle": "没有匹配“{query}”的组织",
+      "noneDescription": "请检查拼写，或改用标识搜索。若某个组织确实存在却未显示，那是缺陷——此查找会读取全部租户，而不只是你所属的那些。",
+      "resultsTitle": "结果",
+      "resultsCount": "{n} 个组织",
+      "capped": "仅显示前 {n} 条匹配。请缩小查询范围以查看其余结果。",
+      "auditBanner": "你正以平台staff身份查看 {name}。此次跨租户读取已记入审计日志（操作者 {operator}）。",
+      "createdAt": "创建于 {at}",
+      "paidAiPlan": "付费 AI 套餐",
+      "scaledTracker": "按席位订阅",
+      "internalBillingNote": "该组织与客户完全一样计费，随后被补偿：每一笔扣费都会照常发生，并在同一事务中配上一笔等额抵扣，因此余额净额为零，而两侧条目都保持可见。",
+      "chip": {
+        "isMeta": "isMeta",
+        "internalBilling": "internalBilling"
+      },
+      "pending": {
+        "usageTitle": "用量与成本",
+        "usageEmptyTitle": "尚未构建",
+        "membersTitle": "成员",
+        "membersEmptyTitle": "尚未构建",
+        "jobsTitle": "最近作业",
+        "jobsEmptyTitle": "尚未构建",
+        "broughtBy": "该面板属于 {owner}。此处画作预留区域而非占位数字——写个 0 会看起来像一个答案。"
+      },
+      "action": {
+        "classify": "标记为内部计费",
+        "unclassify": "移除内部计费标记",
+        "classified": "已标记为内部计费",
+        "unclassified": "已移除内部计费标记",
+        "failedTitle": "未能更新计费分类",
+        "readOnlyNotice": "更改组织的计费分类需要 superadmin 权限。你的账号可以查看本页，但不能执行该操作。",
+        "error": {
+          "REASON_REQUIRED": "必须填写原因——它是日后让这条记录可读的关键。",
+          "NOT_FOUND": "该组织已不存在。",
+          "ALREADY_IN_STATE": "未做更改——该组织已处于此状态。可能另一位操作者刚刚改过；请刷新查看当前状态。",
+          "NOT_PERMITTED": "你的账号无法更改计费分类。",
+          "FAILED": "更改未生效，也未记录任何内容。请重试。"
+        }
+      },
+      "confirm": {
+        "reasonLabel": "原因——必填，将写入审计日志",
+        "reasonHint": "日后任何查看该组织的操作者都会看到。仅写“内部”说明不了任何事。",
+        "cancel": "取消",
+        "classify": {
+          "title": "将 {name} 标记为内部计费？",
+          "body": "该组织产生的每一笔 AI 扣费都会在同一事务中配上一笔等额抵扣——因此与客户完全一样计费，余额净额为零，两侧条目都保持可见。此操作不改变任何费率、不解除任何上限、不涉及任何 Stripe 对象，其他操作者也可以撤销。",
+          "confirm": "标记为内部"
+        },
+        "unclassify": {
+          "title": "移除 {name} 的内部计费标记？",
+          "body": "自此之后的新扣费不再被抵扣，该组织的余额将像任何客户一样下降。已写入的账本条目全部原样保留——该标记决定接下来发生什么，而不是已经发生过什么。",
+          "confirm": "移除标记"
+        }
+      },
+      "log": {
+        "title": "该组织上的平台操作",
+        "scope": "本组织",
+        "emptyTitle": "尚无操作者写入",
+        "emptyDescription": "每次分类更改都会出现在这里，包含操作人与原因。读取不属于操作，不会列出。",
+        "noReason": "未记录原因"
       }
     }
   },

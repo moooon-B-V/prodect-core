@@ -915,6 +915,25 @@ model Organization {
   /// motir-ai on the job-submit envelope so the AI credit gate honours it too.
   isMeta Boolean @default(false)
 
+  /// Whether this org is charged EXACTLY like a customer and then made whole —
+  /// every debit lands, and each is paired in the SAME transaction with an
+  /// `internal_offset` credit, so the balance nets to zero while both entries
+  /// stay visible (`docs/decisions/internal-billing-classification.md` §2–§3).
+  /// It is the OPPOSITE of a suppression: the billing and usage surfaces render
+  /// for such an org exactly as they do for a paying one, which is the point.
+  ///
+  /// ⚠️ DISTINCT from `isMeta` three fields up, and neither implies the other.
+  /// `isMeta` means "Motir's own COGS: every §4 cap lifted, the AI paywall off,
+  /// excluded from revenue" and gains NO new meaning from this column — §9.1 of
+  /// `docs/decisions/code-graph-index-fleet.md` warns in writing against
+  /// overloading it a third time. This column lifts no cap, grants no
+  /// entitlement, changes no rate and touches no Stripe object.
+  ///
+  /// Set by platform staff through `platformBillingClassificationService`, with
+  /// a required reason and one `PlatformAuditLog` row. NO migration flips it:
+  /// unlike `isMeta`'s data-flip, classifying an org is an operator's act.
+  internalBilling Boolean @default(false) @map("internal_billing")
+
   /// Org-wide switch for story-acceptance video generation (Story MOTIR-1627 ·
   /// Subtask MOTIR-1630). Default ON: an ELIGIBLE (paid-AI) org opted into the
   /// (bounded) cost by paying, and a non-eligible org's toggle is moot (the

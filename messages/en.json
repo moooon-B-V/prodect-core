@@ -5311,8 +5311,6 @@
       "monthlySpendSub": "Credits debited per month, org-wide. Last 6 months.",
       "creditsChip": "Credits",
       "creditsUnit": "credits",
-      "unlimited": "Unlimited",
-      "internal": "Internal",
       "searchThisMonth": "Search spend, this month",
       "searchAllTime": "{n} credits all time",
       "searchAttributed": "…of which attributed",
@@ -5320,7 +5318,8 @@
       "searchUnavailable": "Search figures aren’t available right now. Your searches are still being charged — this is the display, not the billing.",
       "searchUnavailableValue": "Unavailable",
       "scopeFollows": "Follows this scope",
-      "scopeOrg": "Whole organization"
+      "scopeOrg": "Whole organization",
+      "internalBilling": "Internal billing"
     },
     "affordance": "Credits are an internal usage allotment — not a currency, and this is not a bill. One planning run debits credits by the tokens it consumed. Buying more credits and plan changes arrive with billing in a later release.",
     "drill": {
@@ -5515,15 +5514,6 @@
       "unavailableValue": "Unavailable",
       "viewRuns": "See which runs spent it"
     },
-    "internal": {
-      "badge": "Internal",
-      "title": "Internal organization",
-      "tagline": "Motir's own workspace — unlimited, never billed.",
-      "subtitle": "{org} is on Motir's internal plan. Every Motir and Motir AI feature is unlimited and there's nothing to bill — this organization is exempt from billing.",
-      "motirLine": "Motir · Unlimited",
-      "aiLine": "Motir AI · Unlimited",
-      "usageNote": "AI usage is still tracked for internal cost visibility on the Usage & cost page."
-    },
     "payment": {
       "title": "Payment & invoices",
       "portal": "Stripe Customer Portal",
@@ -5682,6 +5672,10 @@
         "body": "Planning is paused until the {org} organization's plan is upgraded. Only an organization owner can change the plan or buy credits.",
         "askOwner": "Ask an owner to upgrade"
       }
+    },
+    "internalBilling": {
+      "badge": "Internal billing",
+      "note": "This organization is charged exactly like a customer and then made whole — every figure below is real, and the balance nets to zero."
     }
   },
   "draftWithAi": {
@@ -7186,7 +7180,6 @@
       "monitoring": "Monitoring",
       "governance": "Governance",
       "soonUsage": "10.1",
-      "soonTenants": "10.1",
       "soonGovernance": "10.3"
     },
     "topBar": {
@@ -7290,6 +7283,10 @@
             "password_reset_sent": "Password reset sent",
             "suspend": "Suspended",
             "unsuspend": "Suspension lifted"
+          },
+          "org": {
+            "internal_billing_set": "Classified internal billing",
+            "internal_billing_unset": "Internal classification removed"
           }
         }
       }
@@ -7392,6 +7389,80 @@
         "colLastFired": "Last fired",
         "colExpected": "Expected",
         "never": "Never"
+      }
+    },
+    "orgs": {
+      "breadcrumb": "Platform · Tenants",
+      "breadcrumbAria": "Breadcrumb",
+      "crumbPlatform": "Platform",
+      "crumbTenants": "Tenants",
+      "title": "Organizations",
+      "subtitle": "Find an organization by name or slug. Opening one is an audited cross-tenant read.",
+      "searchLabel": "Name or slug",
+      "searchPlaceholder": "moooon, acme, northwind…",
+      "searchSubmit": "Search",
+      "tooShort": "Enter at least {n} characters.",
+      "idleTitle": "Search for an organization",
+      "idleDescription": "Type a name or slug above. Results are limited to {n}; every match you open is recorded in the audit log.",
+      "noneTitle": "No organizations match “{query}”",
+      "noneDescription": "Check the spelling, or search by slug. An organization that exists but is not shown is a bug — this lookup reads every tenant, not only the ones you belong to.",
+      "resultsTitle": "Results",
+      "resultsCount": "{n, plural, one {# organization} other {# organizations}}",
+      "capped": "Showing the first {n} matches. Narrow the query to see the rest.",
+      "auditBanner": "You are viewing {name} as platform staff. This cross-tenant read is recorded in the audit log (operator {operator}).",
+      "createdAt": "Created {at}",
+      "paidAiPlan": "Paid AI plan",
+      "scaledTracker": "Scaled tracker",
+      "internalBillingNote": "This organization is charged exactly like a customer and then made whole: every debit lands, and each is paired in the same transaction with an offsetting credit, so the balance nets to zero while both entries stay visible.",
+      "chip": {
+        "isMeta": "isMeta",
+        "internalBilling": "internalBilling"
+      },
+      "pending": {
+        "usageTitle": "Usage & cost",
+        "usageEmptyTitle": "Not built yet",
+        "membersTitle": "Members",
+        "membersEmptyTitle": "Not built yet",
+        "jobsTitle": "Recent jobs",
+        "jobsEmptyTitle": "Not built yet",
+        "broughtBy": "This panel is {owner}’s. It is drawn as a reserved region rather than a placeholder figure — a zero here would look like an answer."
+      },
+      "action": {
+        "classify": "Classify as internal billing",
+        "unclassify": "Remove internal classification",
+        "classified": "Classified as internal billing",
+        "unclassified": "Internal classification removed",
+        "failedTitle": "Couldn’t update the classification",
+        "readOnlyNotice": "Changing an organization’s billing classification needs superadmin standing. Your account can read this page and not act on it.",
+        "error": {
+          "REASON_REQUIRED": "A reason is required — it is what makes the record readable later.",
+          "NOT_FOUND": "That organization no longer exists.",
+          "ALREADY_IN_STATE": "No change made — the organization is already in that state. Another operator may have just changed it; reload to see where it stands.",
+          "NOT_PERMITTED": "Your account cannot change a billing classification.",
+          "FAILED": "The change was not applied and nothing was recorded. Try again."
+        }
+      },
+      "confirm": {
+        "reasonLabel": "Reason — required, written to the audit log",
+        "reasonHint": "Shown to any operator reading this organization later. “Internal” on its own answers nothing.",
+        "cancel": "Cancel",
+        "classify": {
+          "title": "Classify {name} as internal billing?",
+          "body": "Every AI debit this organization incurs will be paired, in the same transaction, with an offsetting credit — so it is charged exactly like a customer and its balance nets to zero. Both entries stay visible. This changes no rate, lifts no cap and touches no Stripe object, and another operator can remove it.",
+          "confirm": "Classify as internal"
+        },
+        "unclassify": {
+          "title": "Remove {name}’s internal classification?",
+          "body": "New debits stop being offset from now on, so the organization’s balance falls like any customer’s. Every ledger row already written stays exactly where it is — the flag governs what happens next, not what happened.",
+          "confirm": "Remove classification"
+        }
+      },
+      "log": {
+        "title": "Platform actions on this organization",
+        "scope": "This organization",
+        "emptyTitle": "No operator writes yet",
+        "emptyDescription": "Every classification change appears here, with who made it and why. Reads are not actions and are not listed.",
+        "noReason": "No reason recorded"
       }
     }
   },

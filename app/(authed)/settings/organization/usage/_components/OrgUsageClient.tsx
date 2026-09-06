@@ -166,21 +166,26 @@ export function OrgUsageClient({ orgId, orgName }: OrgUsageClientProps) {
     );
   }
 
-  // The META org (moooon B.V.) is unlimited + never billed: it can't be "out of
-  // credits" or "low", and there is no allotment bar — usage still debits (for
-  // internal cost visibility) so its balance can drift negative, but that number
-  // is never surfaced as a warning.
-  const outOfCredits = !data.isMeta && data.balance <= 0;
+  // ⚠️ NO ORG IS EXEMPT FROM THESE STATES ANY MORE (Story MOTIR-4337 ·
+  // MOTIR-4572). Five `isMeta` reads stood in this block and hid exactly the
+  // panels most worth exercising: out-of-credits, the low-balance warning and
+  // the allotment bar. The org with the most product usage and the strongest
+  // motivation to check them was the only org that could never see them.
+  //
+  // The comment they carried — *"usage still debits so its balance can drift
+  // negative, but that number is never surfaced"* — described the defect
+  // precisely. What replaces it is not a second suppression: an org classified
+  // `internalBilling` incurs every debit a customer incurs and the LEDGER pairs
+  // each one with an offsetting credit in the same transaction (MOTIR-4570), so
+  // its balance is real, it nets to zero, and these three computations are
+  // simply true for it. Rendering out-of-credits gates nothing — the balance
+  // never falls, so the state is reachable in a test and unreachable in life.
+  const outOfCredits = data.balance <= 0;
   const allotment = data.tier?.monthlyCreditAllotment ?? 0;
   const lowBalance =
-    !data.isMeta &&
-    !outOfCredits &&
-    allotment > 0 &&
-    data.balance / allotment < LOW_BALANCE_FRACTION;
+    !outOfCredits && allotment > 0 && data.balance / allotment < LOW_BALANCE_FRACTION;
   const remainingPct =
-    !data.isMeta && allotment > 0
-      ? Math.max(0, Math.min(100, Math.round((data.balance / allotment) * 100)))
-      : null;
+    allotment > 0 ? Math.max(0, Math.min(100, Math.round((data.balance / allotment) * 100))) : null;
 
   return (
     <div className="flex flex-col gap-5" aria-busy={status === 'loading'}>
@@ -374,27 +379,29 @@ function SummaryPanel({
             <Coins className="h-4 w-4" aria-hidden />
             {t('summary.balance')}
           </span>
+          {/* THE NUMBER, for every org. `summary.unlimited` stood here behind an
+              `isMeta` ternary and is deleted with it: a word where a figure
+              belongs is the shape this story exists to remove. */}
           <div className="mt-2 font-serif text-[2.125rem] leading-none text-(--el-text)">
-            {data.isMeta ? (
-              t('summary.unlimited')
-            ) : (
-              <>
-                {fmt(data.balance)}
-                <span className="ml-1 font-sans text-sm text-(--el-text-muted)">
-                  {t('summary.creditsUnit')}
-                </span>
-              </>
-            )}
+            {fmt(data.balance)}
+            <span className="ml-1 font-sans text-sm text-(--el-text-muted)">
+              {t('summary.creditsUnit')}
+            </span>
           </div>
-          <div className="mt-2 flex items-center gap-2 font-sans text-xs text-(--el-text-muted)">
+          <div className="mt-2 flex flex-wrap items-center gap-2 font-sans text-xs text-(--el-text-muted)">
             <span>{data.org.name}</span>
-            {data.isMeta ? (
-              <Pill className="bg-(--el-tint-lavender) text-(--el-text-strong) border-transparent">
-                {t('summary.internal')}
-              </Pill>
-            ) : data.tier ? (
+            {/* A LABEL, never a value. The tier pill is unconditional now, and
+                the classification sits BESIDE it rather than instead of it —
+                the chip says what kind of org this is and changes no figure on
+                the page. */}
+            {data.tier ? (
               <Pill className="bg-(--el-tint-lavender) text-(--el-text-strong) border-transparent">
                 {t('summary.tier', { tier: data.tier.name })}
+              </Pill>
+            ) : null}
+            {data.internalBilling ? (
+              <Pill className="bg-(--el-tint-sky) text-(--el-text-strong) border-transparent">
+                {t('summary.internalBilling')}
               </Pill>
             ) : null}
           </div>

@@ -88,7 +88,6 @@ export default async function AdminLayout({ children }: { children: ReactNode })
         footerStaff: t('shell.footerStaff'),
         exitToApp: t('shell.exitToApp'),
         soonUsage: t('nav.soonUsage'),
-        soonTenants: t('nav.soonTenants'),
         soonGovernance: t('nav.soonGovernance'),
       }}
     >

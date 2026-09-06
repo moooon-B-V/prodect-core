@@ -419,6 +419,22 @@ export const SPEC_COST_SECONDS: Readonly<Record<string, number>> = {
   // replace them from the first green bulk artifacts, as for every new entry.
   'agent-authored-plan.spec.ts': 18.0,
   'activity.spec.ts': 13.8,
+  // Story MOTIR-4337 · Subtask MOTIR-4566 — the operator's org lookup and org
+  // page, plus the 404 a tenant user gets on both. MEASURED locally on
+  // 2026-09-06 against a production build in this lane: **1.7 s** of test body,
+  // `1 passed`. ONE reading, said plainly — recorded as **3.0**, the reading
+  // plus headroom and in line with its nearest neighbour by shape
+  // (`billing-selfhost.spec.ts` at 2.7: one sign-up, then assertions that are
+  // mostly bare HTTP reads). RE-MEASURE from the first green bulk artifact that
+  // includes it, as for every new entry.
+  //
+  // ⚠️ AND ITS ABSENCE FROM THIS TABLE WAS NOT FREE. The spec shipped without an
+  // entry, so it was assigned to no leg and never ran — and it was RED: an
+  // unscoped `getByRole('button', { name: 'Search' })` also matched the admin
+  // shell's disabled global-search button, a strict-mode violation nothing could
+  // report while the spec was unreachable. This guard is what found it, which is
+  // the case it exists for.
+  'admin-org-lookup.spec.ts': 3.0,
   'app-role-surfaces.spec.ts': 1.3,
   'ai-callout-gate.spec.ts': 1.9,
   'ai-plan-generation.spec.ts': 10.0,
