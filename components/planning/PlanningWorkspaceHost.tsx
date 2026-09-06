@@ -1,7 +1,6 @@
 'use client';
 
-import { useCallback, useEffect, useMemo, useState } from 'react';
-import Link from 'next/link';
+import { useCallback, useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useTranslations } from 'next-intl';
 import { Map, X } from 'lucide-react';
@@ -29,12 +28,26 @@ import type { CanvasCrumb } from '@/lib/planning/projectCanvasModel';
 // project's EXISTING tree) — and adds only what the host owns: the exit chrome
 // and the mode/context wiring. It rebuilds none of them.
 //
-// The exit chrome is the shell's own (it has no app nav to leave through): a
-// Close control naming the origin plus `Esc`, both returning to the surface the
-// launcher was invoked from (`planningLaunchBackHref`). The design's overlay
-// keeps the origin screen mounted behind it; this host is a ROUTE (the card's
-// deliverable — `planningWorkspaceHref` stays the single entry href), so
-// "returns you to where you launched from" is a navigation back to that route.
+// ⚠️ THE ROUTE FRAMING IS RETIRED (MOTIR-4729, under story MOTIR-4725). This
+// header used to end: *"The design's overlay keeps the origin screen mounted
+// behind it; this host is a ROUTE (the card's deliverable), so 'returns you to
+// where you launched from' is a navigation back to that route."* It is now the
+// overlay the design always specified — `PlanningWorkspaceOverlay` composes this
+// host inside the shipped `Modal size="full"` over whichever authed page the
+// reader is on, and closing removes four query parameters without unmounting
+// anything.
+//
+// Two consequences land HERE rather than in the overlay, and both are subtractions:
+//
+//   · The exit chrome is a `<button>` calling `onClose`, not a `<Link href>`.
+//     There is nowhere to link to — the reader is already on the page they are
+//     going back to. Its label is a plain `close`; the three `backTo*` keys are
+//     deleted, because naming a destination is exactly what made the route wrong
+//     (`design/ai-chat/design-notes.md` § *Opening & exiting* → *The Close
+//     control's copy*).
+//   · This component no longer listens for `Esc`. Radix's dialog owns the key —
+//     ONE handler, not two — and it already yields to a focused text field. The
+//     listener that stood here is the collision `design/runs/` warned about.
 //
 // The chat pane is `PlanChangeRail` — the multi-turn plan-change CONVERSATION
 // (Subtask MOTIR-1730). The host owns the conversation STATE
@@ -75,17 +88,36 @@ export interface PlanningWorkspaceHostProps {
    * which degrades to the project conversation rather than a dead workspace.
    */
   anchorId?: string | null;
-  /** May this viewer MANAGE the project? Gates the audit-coverage banner
-   *  (MOTIR-2250) — deriving an audit is `assertCanManage`-gated, so a banner
-   *  shown to a member is an invitation to a 403.
+  /** May this viewer configure the project's AI? Gates the audit-coverage banner
+   *  (MOTIR-2250) — `auditCoverageService.getCoverage` asserts `ai:configure`,
+   *  so a banner shown to anyone else is an invitation to a 403.
    *
-   *  ⚠️ Passed EXPLICITLY rather than read from `useProjectAccess()`: `/planning`
-   *  lives in the `(planning)` route group, OUTSIDE `(authed)`, so
-   *  `ProjectAccessProvider` is not mounted here and the hook would return its
-   *  documented permissive default — showing the banner to every member. */
+   *  ⚠️ Still passed EXPLICITLY rather than read from `useProjectAccess()` here,
+   *  and the reason has changed. It used to be that `/planning` lived OUTSIDE
+   *  `(authed)`, so the provider was not mounted and the hook returned its
+   *  permissive default. The overlay mounts INSIDE `(authed)`, so the provider
+   *  IS there — and the overlay reads it, with the permission's own name
+   *  (`can('ai:configure')`), and passes the answer down. The prop stays because
+   *  this host is still rendered by the `(planning)` route until MOTIR-4732
+   *  deletes it, and that render has no provider above it. */
   canManage?: boolean;
-  /** Where Close / `Esc` return to. */
-  backHref: string;
+  /** Close the workspace. The overlay routes Close, `Esc`, the scrim and a
+   *  browser Back through ONE `requestClose()`, which is the seam the pending
+   *  guard (MOTIR-4731) intercepts — so this control must call it rather than
+   *  navigate.
+   *
+   *  Optional for exactly one caller and exactly as long as it lives: the
+   *  `(planning)` page is a SERVER Component and cannot hand a function across
+   *  the boundary, so it keeps passing {@link PlanningWorkspaceHostProps.backHref}
+   *  and this host falls back to a navigation. MOTIR-4732 deletes that page and
+   *  the fallback with it. */
+  onClose?: () => void;
+  /** @deprecated The ROUTE era's return address. An overlay has none — it closes
+   *  by removing four query parameters from the address the reader is already
+   *  at. Read only when {@link PlanningWorkspaceHostProps.onClose} is absent,
+   *  which is the `(planning)` page and nothing else; deleted with it by
+   *  MOTIR-4732. */
+  backHref?: string;
   /** The work item the Plan / Re-plan entrance opened on, resolved server-side
    *  (MOTIR-1491): it is the PRE-FILLED initial target. Null for a project-scoped
    *  launch — or when the `?item=` key no longer resolves. */
@@ -109,6 +141,7 @@ export function PlanningWorkspaceHost({
   projectName,
   launch,
   anchorId = null,
+  onClose,
   backHref,
   initialTarget = null,
   initialCanvasTrail,
@@ -151,50 +184,49 @@ export function PlanningWorkspaceHost({
   // One key for "what the canvas is drawing": a new proposal, or a fresh commit.
   const diffKey = `${treeVersion}:${state.jobId ?? 'none'}:${state.decided ?? 'pending'}:${index.counts.added}-${index.counts.changed}-${index.counts.removed}`;
 
-  const close = useCallback(() => router.push(backHref), [router, backHref]);
-
-  // `Esc` closes the workspace (design sheet 6). It must not steal the key from
-  // the surfaces that own it FIRST: the canvas's full-screen mode exits on Esc,
-  // and a dialog/menu closes on Esc — so skip when something already handled it,
-  // when the canvas is full-screen, and when focus sits in a text field.
-  useEffect(() => {
-    function onKeyDown(event: KeyboardEvent) {
-      if (event.key !== 'Escape' || event.defaultPrevented) return;
-      if (typeof document !== 'undefined' && document.fullscreenElement) return;
-      const target = event.target as HTMLElement | null;
-      const tag = target?.tagName;
-      if (tag === 'INPUT' || tag === 'TEXTAREA' || target?.isContentEditable) return;
-      close();
+  // The one close. `onClose` is the overlay's `requestClose` — the seam the
+  // pending guard wraps; `backHref` is the retiring page's navigation, kept only
+  // because a Server Component cannot pass a callback (MOTIR-4732 removes it).
+  const close = useCallback(() => {
+    if (onClose) {
+      onClose();
+      return;
     }
-    document.addEventListener('keydown', onKeyDown);
-    return () => document.removeEventListener('keydown', onKeyDown);
-  }, [close]);
+    if (backHref) router.push(backHref);
+  }, [onClose, backHref, router]);
 
-  const backLabel =
-    launch.from === 'work-item' && launch.itemKey
-      ? t('backToItem', { item: launch.itemKey })
-      : launch.from === 'convention-refine'
-        ? t('backToCodeHealth')
-        : t('backToRoadmap');
+  // ⚠️ NO `Esc` LISTENER HERE. It was removed with the route (MOTIR-4729): the
+  // dialog owns the key, and the handler that stood here — yielding to a focused
+  // field, to `document.fullscreenElement` and to a `defaultPrevented` event —
+  // was the second of the two the run modal's design warned about
+  // (`design/runs/design-notes.md`: *"a full-screen canvas inside a dialog is
+  // exactly where two `ESC` handlers collide. The dialog's must win"*).
 
   return (
     <PlanningWorkspace
+      // ⚠️ THE CHROME-FITTED VARIANT (MOTIR-4729). `PlanningWorkspace`'s default
+      // is `h-dvh w-full`, which is right for a component that IS the viewport.
+      // Inside the dialog it is not: the panel is already `h-dvh`, and a second
+      // `h-dvh` child of it overflows by whatever the panel's own box costs. The
+      // variant its own docstring offers is exactly this case.
+      className="h-full w-full"
       canvas={
         <div className="flex h-full min-h-0 flex-col bg-(--el-canvas)">
           {/* The shell's own exit chrome + project crumb. The canvas keeps its
               own top-left breadcrumb and top-right search/zoom overlays, so this
               sits ABOVE the canvas rather than over them. */}
           <div className="flex items-center gap-3 border-b border-(--el-border-soft) bg-(--el-surface) px-4 py-2">
-            <Link
-              href={backHref}
+            <button
+              type="button"
+              onClick={close}
               className="inline-flex items-center gap-1.5 rounded-(--radius-control) px-(--spacing-control-x) py-(--spacing-control-y) text-sm font-medium text-(--el-text-secondary) hover:bg-(--el-surface-soft) hover:text-(--el-text) focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-(--focus-ring-color)"
             >
               <X className="h-4 w-4 shrink-0" aria-hidden />
-              {backLabel}
+              {t('close')}
               <kbd className="ml-1 rounded-(--radius-kbd) border border-(--el-border) px-(--spacing-kbd-x) py-(--spacing-kbd-y) font-mono text-[0.6875rem] text-(--el-text-secondary)">
                 {t('escKey')}
               </kbd>
-            </Link>
+            </button>
             <span className="truncate text-sm font-semibold text-(--el-text)">{projectName}</span>
           </div>
 

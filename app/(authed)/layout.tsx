@@ -1,4 +1,4 @@
-import { type CSSProperties, type ReactNode } from 'react';
+import { Suspense, type CSSProperties, type ReactNode } from 'react';
 import { cookies } from 'next/headers';
 import { redirect } from 'next/navigation';
 import { getSession } from '@/lib/auth';
@@ -39,6 +39,7 @@ import { ThemeToggle } from './_components/ThemeToggle';
 import { BuildInPublicButton } from './_components/build-in-public/BuildInPublicButton';
 import { BuildingInPublicHeaderLink } from './_components/build-in-public/BuildingInPublicHeaderLink';
 import { PlanWithAIFab } from '@/components/planning/PlanWithAIFab';
+import { PlanningWorkspaceOverlay } from '@/components/planning/PlanningWorkspaceOverlay';
 import { AccountDeletionBanner } from './_components/AccountDeletionBanner';
 import {
   isWorkspaceTierRevealed,
@@ -516,6 +517,48 @@ export default async function AuthedLayout({ children }: { children: ReactNode }
                   header pill). A fixed bottom-right orb, mounted once at the
                   layout root, under the same gate as the pill. */}
                 {showPlanWithAi ? <PlanWithAIFab /> : null}
+
+                {/* THE PLANNING WORKSPACE, as an OVERLAY (MOTIR-4729 · story
+                  MOTIR-4725). Mounted ONCE here, beside the orb and behind the
+                  same `showPlanWithAi` gate, and open only when the address
+                  carries the overlay's namespaced query — so on every page that
+                  does not, this renders `null` and costs a `useSearchParams`
+                  read.
+
+                  It sits INSIDE `ProjectAccessProvider` deliberately: the
+                  `(planning)` route group lived outside it and had to pass
+                  `canManage` down by prop, which is the coupling this mount
+                  removes. It is also inside `CreateIssueProvider`, so a later
+                  card can bump the issues tick when an approve commits work
+                  items behind an open board (CLAUDE.md § page state after a
+                  mutation).
+
+                  `activeProject` is non-null whenever `showPlanWithAi` is, so
+                  the gate's `no-project` arm cannot be reached from here. */}
+                {showPlanWithAi && activeProject ? (
+                  // ⚠️ THE `<Suspense>` IS NOT DECORATION. This is the first
+                  // component mounted at LAYOUT level that reads
+                  // `useSearchParams()`, and Next refuses to build a route where
+                  // that read is not inside a boundary
+                  // (`missing-suspense-with-csr-bailout`). This layout is dynamic
+                  // today — it awaits `getSession()` and `cookies()` — so the
+                  // error does not fire; the boundary is here so that a later
+                  // change to what this layout awaits cannot break every authed
+                  // route's build at once. `null` is the right fallback: an
+                  // overlay that has not resolved its address yet is a closed
+                  // overlay, which is what the reader should see.
+                  <Suspense fallback={null}>
+                    <PlanningWorkspaceOverlay
+                      projectKey={activeProject.identifier}
+                      projectName={activeProject.name}
+                      onboardingRanAt={
+                        activeProject.onboardingRanAt
+                          ? new Date(activeProject.onboardingRanAt).toISOString()
+                          : null
+                      }
+                    />
+                  </Suspense>
+                ) : null}
               </OnboardingResumeProvider>
             </ReportProvider>
           </ProjectAccessProvider>

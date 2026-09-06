@@ -135,12 +135,14 @@ function renderHost(
     initialTarget = null,
     initialCanvasTrail,
     canManage = false,
+    onClose,
   }: {
     state?: PlanChangeConversationState;
     anchorId?: string | null;
     initialTarget?: PlanningTarget | null;
     initialCanvasTrail?: readonly { id: string; label: string }[];
     canManage?: boolean;
+    onClose?: () => void;
   } = {},
 ) {
   const launch = parsePlanningLaunch(searchParams);
@@ -151,6 +153,7 @@ function renderHost(
       projectName="Acme"
       launch={launch}
       anchorId={anchorId}
+      onClose={onClose}
       backHref={planningLaunchBackHref(launch)}
       initialTarget={initialTarget}
       initialCanvasTrail={initialCanvasTrail}
@@ -259,7 +262,7 @@ describe('PlanningWorkspaceHost — the frame opens BEFORE any canvas data (MOTI
     // the page having already awaited the roots.
     renderHost({ mode: 'replan', from: 'project' });
 
-    expect(screen.getByRole('link', { name: /Back to roadmap/ })).toBeTruthy();
+    expect(screen.getByRole('button', { name: /Close/ })).toBeTruthy();
     expect(screen.getByText('Acme')).toBeTruthy();
     expect(screen.getByTestId('planning-mode-chip').textContent).toBe('plan change');
     // The conversation is live immediately — it depends on no roadmap data, so a
@@ -538,47 +541,76 @@ describe('PlanningWorkspaceHost — the anchor reaches the CANVAS too (MOTIR-207
 });
 
 describe('PlanningWorkspaceHost — the shell carries its own exit chrome', () => {
-  it('closes back to the roadmap for a project-scoped launch', () => {
+  // ⚠️ RE-POINTED (MOTIR-4729). These asserted a `<Link>` labelled with the
+  // ORIGIN — *Back to roadmap* / *Back to MOTIR-7* — and a `keydown` listener on
+  // `document`. Both belonged to the ROUTE: an overlay has no destination to
+  // name, and the dialog owns `Esc` (one handler, not two — the collision
+  // `design/runs/design-notes.md` warned about). The tests are re-pointed at
+  // what replaced them rather than deleted, because the property they were
+  // protecting — the shell carries its OWN way out, since it has no app nav —
+  // is unchanged.
+
+  it('renders ONE Close control, as a button, labelled without a destination', () => {
     renderHost({ mode: 'replan', from: 'project' });
 
-    const close = screen.getByRole('link', { name: /Back to roadmap/ });
-    expect(close.getAttribute('href')).toBe('/roadmap');
+    const close = screen.getByRole('button', { name: /Close/ });
+    // Not a link: there is nowhere to go. The reader is already on the page.
+    expect(close.tagName).toBe('BUTTON');
+    expect(screen.queryByRole('link', { name: /Back to/ })).toBeNull();
+    // The `Esc` hint stays beside it — the key still closes, from the dialog.
+    expect(within(close).getByText('Esc')).toBeTruthy();
   });
 
-  it('closes back to the work item it was launched from', () => {
-    renderHost({ mode: 'contextual', from: 'work-item', item: 'MOTIR-7' });
+  it('says the same thing whatever the launch was — the label names no origin', () => {
+    const project = renderHost({ mode: 'replan', from: 'project' });
+    const projectLabel = screen.getByRole('button', { name: /Close/ }).textContent;
+    project.unmount();
 
-    const close = screen.getByRole('link', { name: /Back to MOTIR-7/ });
-    expect(close.getAttribute('href')).toBe('/items/MOTIR-7');
+    renderHost({ mode: 'contextual', from: 'work-item', item: 'MOTIR-7' });
+    const close = screen.getByRole('button', { name: /Close/ });
+    expect(close.textContent).toBe(projectLabel);
+    // The RAIL still says which item the turn is about — that is its job. The
+    // exit chrome is what stopped naming a destination.
+    expect(close.textContent).not.toContain('MOTIR-7');
   });
 
-  it('Esc returns to the originating surface', () => {
+  it('calls `onClose` — the seam the overlay routes every vector through', () => {
+    const onClose = vi.fn();
+    renderHost({ mode: 'contextual', from: 'work-item', item: 'MOTIR-7' }, { onClose });
+
+    fireEvent.click(screen.getByRole('button', { name: /Close/ }));
+    expect(onClose).toHaveBeenCalledTimes(1);
+    // It does NOT navigate: the page underneath must not unmount.
+    expect(push).not.toHaveBeenCalled();
+  });
+
+  it('falls back to `backHref` for the retiring page, which cannot pass a callback', () => {
+    // The `(planning)` route is a Server Component, so it hands an href. That
+    // arm — and the page — go away with MOTIR-4732.
     renderHost({ mode: 'contextual', from: 'work-item', item: 'MOTIR-7' });
 
-    fireEvent.keyDown(document, { key: 'Escape' });
+    fireEvent.click(screen.getByRole('button', { name: /Close/ }));
     expect(push).toHaveBeenCalledWith('/items/MOTIR-7');
   });
 
-  it('Esc does NOT close while focus is in a text field (the field owns it first)', () => {
-    renderHost({ mode: 'replan', from: 'project' });
+  it('no longer listens for `Esc` itself — the dialog owns the key', () => {
+    const onClose = vi.fn();
+    renderHost({ mode: 'replan', from: 'project' }, { onClose });
 
-    const input = document.createElement('input');
-    document.body.appendChild(input);
-    fireEvent.keyDown(input, { key: 'Escape' });
+    fireEvent.keyDown(document, { key: 'Escape' });
 
+    expect(onClose).not.toHaveBeenCalled();
     expect(push).not.toHaveBeenCalled();
-    input.remove();
   });
 
-  it('Esc does NOT close when another surface already handled the key', () => {
-    renderHost({ mode: 'replan', from: 'project' });
-
-    // e.g. the canvas leaving full screen, or a menu closing — it preventDefaults.
-    const event = new KeyboardEvent('keydown', { key: 'Escape', cancelable: true });
-    event.preventDefault();
-    document.dispatchEvent(event);
-
-    expect(push).not.toHaveBeenCalled();
+  it('mounts the workspace CHROME-FITTED, not viewport-sized', () => {
+    // Inside a `h-dvh` dialog panel a second `h-dvh` child overflows by whatever
+    // the panel's own box costs. `PlanningWorkspace`'s own docstring offers this
+    // variant for exactly a chrome-fitted container.
+    const { container } = renderHost({ mode: 'replan', from: 'project' });
+    const frame = container.querySelector('.grid');
+    expect(frame?.className).toContain('h-full');
+    expect(frame?.className).not.toContain('h-dvh');
   });
 });
 
