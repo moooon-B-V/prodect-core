@@ -64,6 +64,7 @@ function activeStandard(): BillingStatusDTO {
     organizationId: 'org1',
     access: { role: 'owner', canManageBilling: true },
     isMeta: false,
+    internalBilling: false,
     // ④ The Motir Search line's figures (MOTIR-4555 carries them; MOTIR-4557
     // renders them). The default is a zero month, so the base fixture exercises
     // the `nothing_to_bill` shape and the spend cases opt in explicitly.

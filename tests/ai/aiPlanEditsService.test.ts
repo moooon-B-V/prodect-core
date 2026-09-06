@@ -65,7 +65,7 @@ const ctxWithExplanations = {
   project: { ...ctx.project, aiGenerateExplanations: true },
 } as ProjectContext;
 
-const mockOrg = { organizationId: 'org_1', isMeta: false };
+const mockOrg = { organizationId: 'org_1', isMeta: false, internalBilling: false };
 
 function mockWorkItem(overrides: {
   id?: string;
@@ -141,6 +141,7 @@ describe('aiPlanEditsService.submitAugment', () => {
       {
         organizationId: 'org_1',
         isMeta: false,
+        internalBilling: false,
         workspaceId: 'ws_1',
         projectId: 'pj_1',
         projectKey: 'MOTIR',
@@ -162,7 +163,11 @@ describe('aiPlanEditsService.submitAugment', () => {
   });
 
   it('passes the META flag', async () => {
-    vi.mocked(resolveTenantOrg).mockResolvedValue({ organizationId: 'org_1', isMeta: true });
+    vi.mocked(resolveTenantOrg).mockResolvedValue({
+      organizationId: 'org_1',
+      isMeta: true,
+      internalBilling: false,
+    });
     mockSubmitJob();
 
     await aiPlanEditsService.submitAugment('prompt', ctx);

@@ -3,6 +3,7 @@ import { db } from '@/lib/db';
 import type { PlatformPrincipal } from '@/lib/platform/auth';
 import {
   MissingAuditReasonError,
+  NotPlatformStaffError,
   PlatformClassificationStateError,
   PlatformOrganizationNotFoundError,
 } from '@/lib/platform/errors';
@@ -48,9 +49,9 @@ vi.mock('@/lib/platform/auth', async () => {
     // `requirePlatformStaff('superadmin')` call and not the mock.
     requirePlatformStaff: vi.fn(
       async (minimum: 'support' | 'operator' | 'superadmin' = 'support') => {
-        if (!currentPrincipal) throw new actual.NotPlatformStaffError();
+        if (!currentPrincipal) throw new NotPlatformStaffError();
         if (!actual.platformRoleAtLeast(currentPrincipal.role, minimum)) {
-          throw new actual.NotPlatformStaffError();
+          throw new NotPlatformStaffError();
         }
         return currentPrincipal;
       },
@@ -370,7 +371,7 @@ describe('platformBillingClassificationService — the degree ladder', () => {
         true,
         'A support operator reaching past their degree',
       ),
-    ).rejects.toThrow();
+    ).rejects.toBeInstanceOf(NotPlatformStaffError);
 
     // The refused write left no row; the read above left exactly its own.
     expect((await auditRows()).map((r) => r.action)).toEqual(['estate.read']);
@@ -387,7 +388,7 @@ describe('platformBillingClassificationService — the degree ladder', () => {
         true,
         'An operator reaching past their degree',
       ),
-    ).rejects.toThrow();
+    ).rejects.toBeInstanceOf(NotPlatformStaffError);
     expect(await auditRows()).toHaveLength(0);
   });
 
@@ -400,7 +401,7 @@ describe('platformBillingClassificationService — the degree ladder', () => {
         { userId: 'x', email: 'x@example.com', role: 'support' } as PlatformPrincipal,
         'acme',
       ),
-    ).rejects.toThrow();
+    ).rejects.toBeInstanceOf(NotPlatformStaffError);
     await expect(
       platformBillingClassificationService.setInternalBilling(
         { userId: 'x', email: 'x@example.com', role: 'superadmin' } as PlatformPrincipal,
@@ -408,7 +409,7 @@ describe('platformBillingClassificationService — the degree ladder', () => {
         true,
         'Nobody at all',
       ),
-    ).rejects.toThrow();
+    ).rejects.toBeInstanceOf(NotPlatformStaffError);
     expect(await auditRows()).toHaveLength(0);
   });
 });
