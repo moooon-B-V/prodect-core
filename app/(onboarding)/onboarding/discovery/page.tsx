@@ -3,12 +3,11 @@ import { getTranslations } from 'next-intl/server';
 import { getSession } from '@/lib/auth';
 import { getActiveProject } from '@/lib/projects';
 import { readPendingIdea } from '@/lib/onboarding/pendingIdea';
-import { workItemRepository } from '@/lib/repositories/workItemRepository';
 import { migrateOnboardingService } from '@/lib/services/migrateOnboardingService';
+import { readOnboardingSubstrate } from '@/lib/services/onboardingSubstrateService';
 import { shouldRouteToMigrateWizard } from '@/lib/onboarding/migrateHandoff';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { DiscoveryOnboarding } from '@/components/onboarding/DiscoveryOnboarding';
-import { withWorkspaceServiceContext } from '@/lib/workspaces/context';
 
 // The authed discovery onboarding route (Subtask 7.3.5 / MOTIR-833) — where the
 // public front door (7.3.14) lands the visitor after auth (`ONBOARDING_ENTRY_PATH
@@ -61,18 +60,32 @@ export default async function OnboardingPage() {
   // now" back into the wizard made planning unreachable for every migrate
   // project with a tree. The run is read only when the gate would otherwise
   // fire, so the empty-project path keeps its single query.
+  //
+  // ⚠️ AND IT ASKS BOTH HALVES NOW (MOTIR-4756) — the entrance's own comment
+  // carries the reason. The two Server Components share ONE decision, so they
+  // share the read that feeds it: a project with a connected repository and no
+  // work items belongs in the wizard from either door.
   if (!ctx.project.onboardingRanAt) {
-    const itemCount = await withWorkspaceServiceContext(ctx.workspaceId, (tx) =>
-      workItemRepository.countProjectIssues(ctx.projectId, ctx.workspaceId, undefined, tx),
-    );
+    const substrate = await readOnboardingSubstrate(ctx.projectId, {
+      userId: ctx.userId,
+      workspaceId: ctx.workspaceId,
+    });
     const run =
-      itemCount > 0
+      substrate.itemCount > 0 || substrate.repositoryConnected
         ? await migrateOnboardingService.getForProject(ctx.projectId, {
             userId: ctx.userId,
             workspaceId: ctx.workspaceId,
           })
         : null;
-    if (shouldRouteToMigrateWizard({ itemCount, run })) redirect('/onboarding/migrate');
+    if (
+      shouldRouteToMigrateWizard({
+        itemCount: substrate.itemCount,
+        repositoryConnected: substrate.repositoryConnected,
+        run,
+      })
+    ) {
+      redirect('/onboarding/migrate');
+    }
   }
 
   const initialIdea = await readPendingIdea();

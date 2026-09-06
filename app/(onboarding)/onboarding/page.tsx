@@ -3,12 +3,11 @@ import { getTranslations } from 'next-intl/server';
 import { getSession } from '@/lib/auth';
 import { getActiveProject } from '@/lib/projects';
 import { readPendingIdea } from '@/lib/onboarding/pendingIdea';
-import { workItemRepository } from '@/lib/repositories/workItemRepository';
 import { migrateOnboardingService } from '@/lib/services/migrateOnboardingService';
+import { readOnboardingSubstrate } from '@/lib/services/onboardingSubstrateService';
 import { shouldRouteToMigrateWizard } from '@/lib/onboarding/migrateHandoff';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { OnboardingEntrance } from '@/components/onboarding/OnboardingEntrance';
-import { withWorkspaceServiceContext } from '@/lib/workspaces/context';
 
 // The onboarding ENTRANCE route (Subtask 7.22.4 / MOTIR-1462) — the new-vs-existing
 // fork the user lands on at `/onboarding`, designed by MOTIR-1461
@@ -59,18 +58,36 @@ export default async function OnboardingEntrancePage() {
   // …UNLESS the migrate wizard already handed off to planning (MOTIR-1725) —
   // this route is also `PLANNING_WORKSPACE_PATH`, the universal "Plan with AI"
   // target, so an unconditional bounce here trapped the hand-off as well.
+  //
+  // ⚠️ AND THE ROUTER ASKS BOTH HALVES OF THE QUESTION NOW (MOTIR-4756). It read
+  // the item count alone, so a project with a connected repository and zero work
+  // items was sent down the start-fresh path — the one path that does NOT read
+  // code. The substrate read answers "what does this project already have?" once,
+  // and the predicate decides on both inputs.
   if (!ctx.project.onboardingRanAt) {
-    const itemCount = await withWorkspaceServiceContext(ctx.workspaceId, (tx) =>
-      workItemRepository.countProjectIssues(ctx.projectId, ctx.workspaceId, undefined, tx),
-    );
+    const substrate = await readOnboardingSubstrate(ctx.projectId, {
+      userId: ctx.userId,
+      workspaceId: ctx.workspaceId,
+    });
+    // The run is only consulted when something could route us to the wizard —
+    // its only job here is the MOTIR-1725 directional guard, which has nothing to
+    // suppress on a project the predicate would not route anyway.
     const run =
-      itemCount > 0
+      substrate.itemCount > 0 || substrate.repositoryConnected
         ? await migrateOnboardingService.getForProject(ctx.projectId, {
             userId: ctx.userId,
             workspaceId: ctx.workspaceId,
           })
         : null;
-    if (shouldRouteToMigrateWizard({ itemCount, run })) redirect('/onboarding/migrate');
+    if (
+      shouldRouteToMigrateWizard({
+        itemCount: substrate.itemCount,
+        repositoryConnected: substrate.repositoryConnected,
+        run,
+      })
+    ) {
+      redirect('/onboarding/migrate');
+    }
   }
 
   const carriedIdea = await readPendingIdea();
