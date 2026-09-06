@@ -1192,6 +1192,15 @@
           grid-template-columns: 1fr;
         }
       }
+      mark.superseded {
+        display: block;
+        margin-bottom: 8px;
+        padding: 8px 10px;
+        border-radius: var(--radius-control);
+        background: var(--el-tint-yellow);
+        color: var(--el-text-strong);
+        font-weight: 500;
+      }
     </style>
   </head>
   <body>
@@ -1790,7 +1799,13 @@
               <div class="note">
                 <svg viewBox="0 0 24 24"><use href="#i-info" /></svg>
                 <span
-                  >The shipped <code>isMeta</code> treatment is unchanged: the balance reads
+                  ><mark class="superseded"
+                    >⚠️ SUPERSEDED 2026-09-05 (MOTIR-4337 / MOTIR-4572): an INTERNAL org reads a
+                    REAL balance that nets to zero because every debit is offset in the same
+                    transaction — not “Unlimited”. Panels 7a and 7b render for it too. Kept as a
+                    record of shipped behaviour until that card merges.</mark
+                  >
+                  The shipped <code>isMeta</code> treatment is unchanged: the balance reads
                   <strong>Unlimited</strong> rather than a figure. Search spend is still
                   <strong>recorded and shown</strong> here — it is internal cost visibility, which
                   is what that branch is for — but no figure on this page is a bill.</span
