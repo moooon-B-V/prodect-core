@@ -254,6 +254,33 @@ const KNOWN: { file: string; address: string; why: string }[] = [
     address: '/design',
     why: "The same `Design` showcase nav item, in the same chrome — the not-found room is drawn INSIDE that bar (MOTIR-4245), so it carries the bar's three nav items verbatim. Permanent for the same reason as the row above: the route ships, in the other repository.",
   },
+  // ── The AI-settings PROMISE links out to the provider table (MOTIR-3666) ──
+  // `/legal/model-providers` is motir-marketing's, exactly as the `/legal/*`
+  // rows below are: MOTIR-4103 moved `content/legal/` and `app/(public)/legal/`
+  // out of this repository, so this repo's route inventory cannot resolve it.
+  //
+  // The link is the POINT of the amendment rather than decoration, which is why
+  // it is a KNOWN row and not a correction. The Planner card states Motir's own
+  // position and deliberately restates NO provider fact — no retention window,
+  // no training answer, no provider names — so the link is the whole mechanism
+  // by which a reader reaches the per-provider answers. Removing the address
+  // would remove the mechanism.
+  //
+  // ⚠️ It is drawn as a bare `/legal/model-providers` in the asset. The
+  // IMPLEMENTING card (MOTIR-3670) resolves it through motir-core's existing
+  // public-site origin — MOTIR-3910 set one and MOTIR-3884's sweep names every
+  // absolute-URL reader — rather than hard-coding a host in a component. The
+  // mock draws the destination; the implementation owns how the href is built.
+  {
+    file: 'design/ai-settings/ai-planning-settings.mock.html',
+    address: '/legal/model-providers',
+    why: "The provider table the Planner card's data-practice promise links out to, so no provider fact is restated in the component. A motir.co route (MOTIR-4009); MOTIR-4103 removed `app/(public)/legal/` from this repository, so this repo's route inventory cannot resolve it.",
+  },
+  {
+    file: 'design/ai-settings/design-notes.md',
+    address: '/legal/model-providers',
+    why: 'The same address, named in the notes that specify the link and its copy (§D3 / §D9). Resolves on the brand host; MOTIR-4103 removed the route from this one.',
+  },
   // ── `/legal*` LEFT THIS HOST ENTIRELY (MOTIR-4103) ────────────────────────
   // Two different reasons wearing one address, and the split matters because
   // only one of them is history.
@@ -1343,6 +1370,11 @@ const KNOWN_PATHS: { file: string; path: string; why: string }[] = [
     file: 'design/public-site/design-notes.md',
     path: 'app/(public)/legal',
     why: 'The chrome-comparison table names where each surface was served in motir-core before the move. MOTIR-4103 deleted `app/(public)/legal/` — and with it the whole `(public)` route group — so the citation is a point-in-time record of the host this asset exists to move those pages OFF.',
+  },
+  {
+    file: 'design/ai-settings/design-notes.md',
+    path: 'app/(public)/legal',
+    why: "The same deletion, cited from the other side (MOTIR-3666 §D3). The Planner card's promise links to `/legal/model-providers`, and the note names BOTH halves of what left — `content/legal/` and the route that served it — because the implementing card has to resolve that href through motir-core's public-site origin rather than as a same-origin path. Naming the absent directory is the point of the sentence, so the citation is deliberate and permanent.",
   },
   // ── A path the design says must NEVER exist (MOTIR-3492) ──────────────────
   // The inverse of every other row here: these are not paths an asset expects
