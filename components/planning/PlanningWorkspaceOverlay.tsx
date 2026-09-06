@@ -1,7 +1,7 @@
 'use client';
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { useRouter, usePathname, useSearchParams } from 'next/navigation';
+import { usePathname, useSearchParams } from 'next/navigation';
 import { useTranslations } from 'next-intl';
 import { Modal } from '@/components/ui/Modal';
 import { NoAccessState } from '@/components/projects/NoAccessState';
@@ -19,7 +19,6 @@ import {
 import { resolvePlanningHostGate } from '@/lib/planning/workspaceHost';
 import { fetchPlanningAnchor } from '@/lib/planning/planningAnchorClient';
 import { shallowPush } from '@/lib/navigation/shallowUrl';
-import { ONBOARDING_ENTRY_PATH } from '@/lib/navigation/landing';
 import { workItemCrumbLabel, type CanvasCrumb } from '@/lib/planning/projectCanvasModel';
 import type { PlanningTarget } from '@/lib/planning/planningTargets';
 
@@ -86,14 +85,18 @@ export interface PlanningWorkspaceOverlayProps {
   /** The active project's `MOTIR`-style key. */
   projectKey: string;
   projectName: string;
-  /**
-   * The project's immutable onboarding-ran marker, serialised. Null means
-   * onboarding still owns this project's journey and the workspace forwards
-   * rather than opening — the SAME marker `/onboarding`'s own redirect reads,
-   * so the two surfaces cannot disagree.
-   */
-  onboardingRanAt: string | null;
 }
+
+// ⚠️ THERE IS NO `onboardingRanAt` PROP, AND THAT IS THE DELIBERATE SHAPE
+// (MOTIR-4765). It used to arrive from `app/(authed)/layout.tsx` for one reason:
+// to feed `resolvePlanningHostGate`, which answered `'onboarding'` and made this
+// component `router.push` the reader out of the window they had just opened. The
+// marker says *"has never had a plan APPROVED"* — not *"has never planned"* — so
+// that ejected established, code-bearing projects. Whether this project can be
+// planned is the planner's judgement now (MOTIR-4767), made INSIDE the session
+// this component hosts, and the surface that acts on it is MOTIR-4769's. The
+// prop is gone rather than unused so nothing can quietly re-derive a wall from
+// it.
 
 /**
  * What the anchor read SETTLED on, and for which key.
@@ -114,11 +117,9 @@ interface AnchorLoad {
 export function PlanningWorkspaceOverlay({
   projectKey,
   projectName,
-  onboardingRanAt,
 }: PlanningWorkspaceOverlayProps) {
   const t = useTranslations('planningWorkspace');
   const ta = useTranslations('projectAccess');
-  const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
   const { can } = useProjectAccess();
@@ -229,20 +230,20 @@ export function PlanningWorkspaceOverlay({
 
   // ── THE GATE ───────────────────────────────────────────────────────────────
   // `no-project` cannot occur: the mount itself is behind `Boolean(activeProject)`
-  // in the layout, the same gate the orb is behind.
+  // in the layout, the same gate the orb is behind. So the only verdict this
+  // component actually branches on is `no-access`.
+  //
+  // ⚠️ AND THERE IS NO NAVIGATION HERE — not on mount, not in an effect, not for
+  // any project (MOTIR-4765). The gate has no `onboarding` verdict left to fire
+  // one, and a never-onboarded project OPENS the workspace exactly as an
+  // established one does. A move to onboarding is something the SESSION asks for
+  // once it has read the project (MOTIR-4767's verdict, honoured by MOTIR-4769),
+  // shown to the reader before it happens; it is never something this component
+  // does to somebody for arriving.
   const gate = resolvePlanningHostGate({
     hasActiveProject: true,
     canBrowse: can('project:browse'),
-    onboardingRanAt,
   });
-
-  // Never onboarded → onboarding still owns this project (it decides between the
-  // start-fresh entrance and the migrate wizard). A REAL navigation, with the
-  // overlay stripped so returning does not immediately re-open it.
-  useEffect(() => {
-    if (!open || gate !== 'onboarding') return;
-    router.push(ONBOARDING_ENTRY_PATH);
-  }, [open, gate, router]);
 
   // ── THE ANCHOR READ ────────────────────────────────────────────────────────
   // Only a `work-item` launch has one. The dialog frame is up while it is in
@@ -288,7 +289,7 @@ export function PlanningWorkspaceOverlay({
     return () => controller.abort();
   }, [open, anchorKey]);
 
-  if (!open || gate === 'onboarding') return null;
+  if (!open) return null;
 
   // The anchor's result is only usable while it is still the key in the address:
   // a re-target swaps `anchorKey` before the new read lands, and the previous

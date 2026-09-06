@@ -565,11 +565,6 @@ export default async function AuthedLayout({ children }: { children: ReactNode }
                     <PlanningWorkspaceOverlay
                       projectKey={activeProject.identifier}
                       projectName={activeProject.name}
-                      onboardingRanAt={
-                        activeProject.onboardingRanAt
-                          ? new Date(activeProject.onboardingRanAt).toISOString()
-                          : null
-                      }
                     />
                   </Suspense>
                 ) : null}

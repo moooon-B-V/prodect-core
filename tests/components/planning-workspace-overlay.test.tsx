@@ -133,16 +133,17 @@ beforeEach(() => {
 });
 afterEach(cleanup);
 
-function mount(over: { onboardingRanAt?: string | null } = {}) {
-  return render(
-    <PlanningWorkspaceOverlay
-      projectKey="ACME"
-      projectName="Acme"
-      onboardingRanAt={
-        'onboardingRanAt' in over ? (over.onboardingRanAt ?? null) : '2026-01-01T00:00:00.000Z'
-      }
-    />,
-  );
+/**
+ * ⚠️ NO `onboardingRanAt` — the prop is gone (MOTIR-4765).
+ *
+ * It existed to feed `resolvePlanningHostGate`, which answered `'onboarding'`
+ * for a null marker and made this component push the reader out of the window
+ * they had just opened. The marker means *"has never had a plan APPROVED"*, so
+ * that ejected established, code-bearing projects. The helper takes no override
+ * because there is no longer a value that changes what this component does.
+ */
+function mount() {
+  return render(<PlanningWorkspaceOverlay projectKey="ACME" projectName="Acme" />);
 }
 
 /** Put the overlay in the address, as a door's `shallowPush` would. */
@@ -249,13 +250,7 @@ describe('closing writes the address, and only the address', () => {
     // Back: the address changes under the component, exactly as Next syncs
     // `useSearchParams` with a `popstate`.
     params = new URLSearchParams('');
-    view.rerender(
-      <PlanningWorkspaceOverlay
-        projectKey="ACME"
-        projectName="Acme"
-        onboardingRanAt="2026-01-01T00:00:00.000Z"
-      />,
-    );
+    view.rerender(<PlanningWorkspaceOverlay projectKey="ACME" projectName="Acme" />);
     await act(async () => {});
 
     expect(screen.queryByTestId('host')).toBeNull();
@@ -276,13 +271,7 @@ describe('closing writes the address, and only the address', () => {
     await act(async () => {});
 
     params = new URLSearchParams('');
-    view.rerender(
-      <PlanningWorkspaceOverlay
-        projectKey="ACME"
-        projectName="Acme"
-        onboardingRanAt="2026-01-01T00:00:00.000Z"
-      />,
-    );
+    view.rerender(<PlanningWorkspaceOverlay projectKey="ACME" projectName="Acme" />);
     await act(async () => {});
 
     expect(document.activeElement).toBe(opener);
@@ -361,13 +350,7 @@ describe('the ANCHOR read', () => {
     // An approve's `router.refresh()` re-renders with the SAME address. The host
     // seeds three things in `useState` initializers, so a remount here would
     // throw away the conversation and the canvas's drill state.
-    view.rerender(
-      <PlanningWorkspaceOverlay
-        projectKey="ACME"
-        projectName="Acme"
-        onboardingRanAt="2026-01-01T00:00:00.000Z"
-      />,
-    );
+    view.rerender(<PlanningWorkspaceOverlay projectKey="ACME" projectName="Acme" />);
     await act(async () => {});
     expect(screen.getByTestId('host').getAttribute('data-mount')).toBe(firstMount);
 
@@ -377,13 +360,7 @@ describe('the ANCHOR read', () => {
       ancestors: [],
     });
     params = new URLSearchParams('plan=contextual&planFrom=work-item&planItem=MOTIR-8');
-    view.rerender(
-      <PlanningWorkspaceOverlay
-        projectKey="ACME"
-        projectName="Acme"
-        onboardingRanAt="2026-01-01T00:00:00.000Z"
-      />,
-    );
+    view.rerender(<PlanningWorkspaceOverlay projectKey="ACME" projectName="Acme" />);
     await act(async () => {});
 
     expect(screen.getByTestId('host').getAttribute('data-mount')).not.toBe(firstMount);
@@ -405,20 +382,49 @@ describe('the GATES the route ran on the server', () => {
     expect(screen.getByRole('heading', { name: /access/i })).toBeTruthy();
   });
 
-  it('a never-onboarded project forwards, and mounts nothing', async () => {
+  // ⚠️ THE TWO TESTS THIS REPLACES ASSERTED THE OPPOSITE, AND THEY WERE RIGHT
+  // ABOUT THE BEHAVIOUR THAT SHIPPED (MOTIR-4765). One required
+  // `expect(push).toHaveBeenCalledWith('/onboarding')` for a null marker; the
+  // other required the same push NOT to fire while the overlay was closed. Both
+  // described a forward the product should never have had: `onboardingRanAt` is
+  // stamped once, by `plansService.approvePlan`, so `null` means *"has never had
+  // a plan APPROVED"* rather than *"has never planned"* — and on the overlay the
+  // forward fired seconds AFTER the reader pressed *Plan with AI*.
+  //
+  // This is not an assertion edited to agree with today (`CLAUDE.md` § the
+  // receipt reflex): the behaviour was deliberately removed by a card whose
+  // subject is that it was wrong, so the test moves with it. What replaces it is
+  // wider than what it replaces — the component must navigate NOWHERE, for any
+  // project, open or closed.
+  it('a NEVER-ONBOARDED project opens the workspace like any other, and nothing navigates', async () => {
     openAt('plan=project&planFrom=project');
-    mount({ onboardingRanAt: null });
+    mount();
     await act(async () => {});
 
-    expect(push).toHaveBeenCalledWith('/onboarding');
-    expect(screen.queryByTestId('host')).toBeNull();
+    expect(screen.getByTestId('host')).toBeTruthy();
+    expect(push).not.toHaveBeenCalled();
   });
 
-  it('does not forward when the overlay is closed', async () => {
+  it('navigates nowhere while the overlay is CLOSED either', async () => {
     openAt('filter=type%3Acode');
-    mount({ onboardingRanAt: null });
+    mount();
     await act(async () => {});
 
+    expect(screen.queryByTestId('host')).toBeNull();
+    expect(push).not.toHaveBeenCalled();
+  });
+
+  it('the ACCESS arm still precedes everything, and still navigates nowhere', async () => {
+    // The half MOTIR-4765 does not touch, re-asserted beside the change so that
+    // widening the gate cannot be read as relaxing it: a viewer who cannot
+    // browse is told so, in the dialog, and is not sent anywhere either.
+    granted = new Set();
+    openAt('plan=project&planFrom=project');
+    mount();
+    await act(async () => {});
+
+    expect(screen.queryByTestId('host')).toBeNull();
+    expect(screen.getByRole('heading', { name: /access/i })).toBeTruthy();
     expect(push).not.toHaveBeenCalled();
   });
 
@@ -466,13 +472,7 @@ describe('the host may VETO a close (the pending guard’s seam, MOTIR-4731)', (
     await act(async () => {
       window.dispatchEvent(new PopStateEvent('popstate'));
     });
-    view.rerender(
-      <PlanningWorkspaceOverlay
-        projectKey="ACME"
-        projectName="Acme"
-        onboardingRanAt="2026-01-01T00:00:00.000Z"
-      />,
-    );
+    view.rerender(<PlanningWorkspaceOverlay projectKey="ACME" projectName="Acme" />);
     await act(async () => {});
 
     // Still mounted — the guard needs a workspace to ask over.
@@ -491,13 +491,7 @@ describe('the host may VETO a close (the pending guard’s seam, MOTIR-4731)', (
     await act(async () => {
       window.dispatchEvent(new PopStateEvent('popstate'));
     });
-    view.rerender(
-      <PlanningWorkspaceOverlay
-        projectKey="ACME"
-        projectName="Acme"
-        onboardingRanAt="2026-01-01T00:00:00.000Z"
-      />,
-    );
+    view.rerender(<PlanningWorkspaceOverlay projectKey="ACME" projectName="Acme" />);
     await act(async () => {});
 
     fireEvent.click(screen.getByRole('button', { name: 'Keep planning' }));
@@ -517,13 +511,7 @@ describe('the host may VETO a close (the pending guard’s seam, MOTIR-4731)', (
     await act(async () => {
       window.dispatchEvent(new PopStateEvent('popstate'));
     });
-    view.rerender(
-      <PlanningWorkspaceOverlay
-        projectKey="ACME"
-        projectName="Acme"
-        onboardingRanAt="2026-01-01T00:00:00.000Z"
-      />,
-    );
+    view.rerender(<PlanningWorkspaceOverlay projectKey="ACME" projectName="Acme" />);
     await act(async () => {});
 
     expect(screen.queryByTestId('host')).toBeNull();
@@ -572,13 +560,7 @@ describe('coverage · Keep planning after a Back, for every launch shape', () =>
     await act(async () => {
       window.dispatchEvent(new PopStateEvent('popstate'));
     });
-    view.rerender(
-      <PlanningWorkspaceOverlay
-        projectKey="ACME"
-        projectName="Acme"
-        onboardingRanAt="2026-01-01T00:00:00.000Z"
-      />,
-    );
+    view.rerender(<PlanningWorkspaceOverlay projectKey="ACME" projectName="Acme" />);
     await act(async () => {});
 
     fireEvent.click(screen.getByRole('button', { name: 'Keep planning' }));
