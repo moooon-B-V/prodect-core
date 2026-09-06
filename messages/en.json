@@ -598,6 +598,12 @@
     }
   },
   "errors": {
+    "notFound": {
+      "title": "We couldn’t find that page",
+      "description": "The address may be mistyped, or whatever it pointed at may have been deleted — or moved somewhere you can’t reach.",
+      "workItemsAction": "Go to work items",
+      "homeAction": "Go to Motir"
+    },
     "actions": {
       "pickProjectFirst": "Pick a project first.",
       "unknownRelationship": "Unknown relationship.",

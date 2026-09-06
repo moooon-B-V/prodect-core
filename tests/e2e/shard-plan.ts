@@ -491,6 +491,11 @@ export const SPEC_COST_SECONDS: Readonly<Record<string, number>> = {
   'modal-scroll-container.spec.ts': 6.0,
   'multi-tenant-isolation.spec.ts': 2.5,
   'navigation-instant.spec.ts': 8.0,
+  // MOTIR-4708 — one sign-up + project, then four theme x OS passes over the
+  // 404 route. Estimated from `appearance-sync.spec.ts` (7.0 s: the same sign-up
+  // and the same PATCH-awaited toggle) plus three extra navigations; re-measure
+  // it from a green run's `e2e-harness/*.jsonl` when this table is next refreshed.
+  'not-found-theme.spec.ts': 9.0,
   'notifications.spec.ts': 14.3,
   'onboarding-discovery.spec.ts': 2.6,
   'onboarding-entrance.spec.ts': 6.8,
