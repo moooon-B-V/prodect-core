@@ -298,6 +298,18 @@ export const STRUCTURAL_GUARD_SPECS = [
   // `node:path` and two dependency-free helpers under `tests/`, so it carries
   // no coverage into the merged report.
   'tests/ci-docs-guards-lane.test.ts',
+  // ── tests/ — the acceptance-lane IMPORT-DIRECTION guard (MOTIR-4751) ──────
+  // Same shape as the entry above: it reads `playwright.acceptance.config.ts`
+  // for the lane's own `testMatch`, walks every `*.spec.ts` under that config's
+  // `testDir` and asks which of the two interchangeable fixture modules each
+  // one imports. It opens no database, renders nothing, and imports only
+  // `node:fs` / `node:path` and `tests/helpers/importGraph`, so it carries no
+  // coverage into the merged report.
+  //
+  // It does its OWN walk rather than importing a scanner, so nothing derives it
+  // — hence the `SELF_WALKING_MEMBERS` entry beside this one in
+  // `tests/ci-structural-guards-lane.test.ts`.
+  'tests/e2e-acceptance-lane-imports.test.ts',
 ] as const;
 
 /**
