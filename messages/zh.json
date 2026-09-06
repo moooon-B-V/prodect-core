@@ -598,6 +598,12 @@
     }
   },
   "errors": {
+    "notFound": {
+      "title": "找不到该页面",
+      "description": "地址可能有误，或者它指向的内容已被删除——也可能被移到了你无权访问的位置。",
+      "workItemsAction": "前往工作项",
+      "homeAction": "前往 Motir"
+    },
     "actions": {
       "pickProjectFirst": "请先选择一个项目。",
       "unknownRelationship": "未知的关系类型。",
