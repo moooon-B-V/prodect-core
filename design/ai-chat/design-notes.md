@@ -935,7 +935,31 @@ is its depth, and the depth already ships.
 
 #### The CSS, verbatim — copyable into `theme.css` (AC 3)
 
-Paste as-is. It follows the file's own `@scope` house form (the same one the
+> **⚠️ AMENDED 2026-09-06 (MOTIR-4743) — TWO DECLARATIONS BELOW DO NOT WORK AS
+> WRITTEN, and the shipped section transcribes them onto the seam.** The two
+> components declare exactly two things in an inline `style` prop —
+> `background-image` and `box-shadow` — and an inline declaration beats every
+> stylesheet rule. So a `background-image` OR a `box-shadow` written in a
+> `[data-style]` rule for these controls is **inert**, which is the defect this
+> whole section exists to close. Both are read through a `var()` seam instead:
+> `--plan-hero-fill` / `--plan-orb-fill` (MOTIR-4743) and
+> `--plan-hero-shadow` / `--plan-orb-shadow` (MOTIR-3522, and the mechanism row 8
+> below already relies on). A rule on the shared `[data-surface='ai-cta']`
+> selector sets BOTH shadow names, since each control reads only its own.
+>
+> **The values below are unchanged and are still the specification** — every AA
+> ratio in the table above was measured on exactly these declarations, and
+> `tests/theme/aiCtaStyleSeam.test.ts` compares this block against the shipped
+> stylesheet declaration for declaration, applying that one translation. What
+> changed is only which PROPERTY NAME carries each value.
+>
+> **The shadow half was found by a RENDER, not by a reading.** Transcribed
+> literally, `tests/e2e/hero-ai-control-styles.spec.ts` reported exactly one
+> control identical to the base — the **aurora orb**, the only row that sets
+> nothing but a shadow. Every other style also moves a fill, a border or the
+> type, so its rule "worked" while its shadow silently did not.
+
+Paste with that translation. It follows the file's own `@scope` house form (the same one the
 glassmorphism, aurora, neumorphism and retrofuturism material layers use), reads
 only `--el-*` and the styles' own palette-agnostic scalars, and names no raw hex.
 It belongs **after** each style's token block, with the other material-layer rules —
