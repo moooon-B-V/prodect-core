@@ -133,19 +133,51 @@ describe('BillingClient', () => {
     expect(screen.getByText('Active')).toBeTruthy();
   });
 
-  it('renders the Internal plan card (no upgrade CTAs) for the META org', async () => {
-    const meta = { ...activeStandard(), isMeta: true };
+  // ⚠️ THIS CASE IS INVERTED, NOT DELETED (Story MOTIR-4337 · MOTIR-4572). It
+  // asserted that a META org rendered ONE read-only card and no storefront —
+  // *"no upgrade / change-plan / seats buttons"*. That treatment is the defect
+  // the story removes: the organization with the most product usage was the only
+  // one that could not see the screens. So the same fixture now asserts the
+  // opposite, which is the only way a later change back would be caught.
+  it('renders the ORDINARY storefront for an internal-billing org, plus a label', async () => {
+    const internal = { ...activeStandard(), internalBilling: true };
     vi.stubGlobal(
       'fetch',
-      vi.fn(async () => new Response(JSON.stringify(meta), { status: 200 })),
+      vi.fn(async () => new Response(JSON.stringify(internal), { status: 200 })),
     );
     renderClient();
 
-    await waitFor(() => expect(screen.getByText('Internal organization')).toBeTruthy());
-    // The storefront + its CTAs are gone — no upgrade / change-plan / seats buttons.
-    expect(screen.queryByRole('button', { name: 'Upgrade Motir' })).toBeNull();
-    expect(screen.queryByRole('button', { name: 'Change plan' })).toBeNull();
-    expect(screen.queryByRole('heading', { name: 'Motir AI', level: 2 })).toBeNull();
+    // Every view a paying org gets — the lines, the headings, the CTAs.
+    await waitFor(() =>
+      expect(screen.getByRole('heading', { name: 'Motir AI', level: 2 })).toBeTruthy(),
+    );
+    expect(screen.getByRole('heading', { name: 'Motir', level: 2 })).toBeTruthy();
+    // The two CTAs the old treatment named in its own assertion as ABSENT.
+    expect(screen.getByRole('button', { name: 'Upgrade Motir' })).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'Change plan' })).toBeTruthy();
+    // A LABEL beside them, and nothing suppressed by it.
+    expect(screen.getByText('Internal billing')).toBeTruthy();
+  });
+
+  // ⚠️ THE CTAs MUST ALSO ARRIVE SOMEWHERE. A storefront whose buttons render
+  // and lead nowhere would pass the case above and fail the story — so each of
+  // the two views the home screen can reach is entered over the SAME classified
+  // fixture, which is the whole of what AC 3 means by "plans and seats".
+  it('an internal-billing org reaches the PLANS view and the SEATS view', async () => {
+    const internal = { ...activeStandard(), internalBilling: true };
+
+    renderWithBody(internal);
+    await waitFor(() => expect(screen.getByText('Billing & plans')).toBeTruthy());
+    fireEvent.click(screen.getByRole('button', { name: 'Change plan' }));
+    await waitFor(() => expect(screen.getByText('Motir AI — plans & subscription')).toBeTruthy());
+
+    cleanup();
+    vi.unstubAllGlobals();
+
+    renderWithBody(internal);
+    await waitFor(() => expect(screen.getByText('Billing & plans')).toBeTruthy());
+    fireEvent.click(screen.getByRole('button', { name: 'Upgrade Motir' }));
+    await waitFor(() => expect(screen.getByText('Scale up Motir')).toBeTruthy());
   });
 
   it('shows the error state when the boundary fails', async () => {
@@ -559,10 +591,18 @@ describe('BillingClient — the Motir CI line', () => {
     expect(screen.getByRole('heading', { name: 'Motir AI', level: 2 })).toBeTruthy();
   });
 
-  it('renders NO CI line for the META org (the Internal plan treatment stands alone)', async () => {
-    renderWithBody({ ...withCi({}), isMeta: true });
-    await waitFor(() => expect(screen.getByText('Internal organization')).toBeTruthy());
-    expect(screen.queryByRole('heading', { name: 'Motir CI' })).toBeNull();
+  // ⚠️ INVERTED (MOTIR-4572), and this one carries the story's own amendment.
+  // The CI line used to be HIDDEN for a meta org. It now RENDERS, in whatever
+  // state `ciAllowanceService` returns — for a meta org that state is
+  // `bypassed`, and showing it is the point. What did NOT change is the bypass
+  // itself: `ci-minutes-allowance.md` §4.4 records that moooon B.V. pays its own
+  // GitHub bill, so charging a CI minute Motir never paid for and then offsetting
+  // it would put an invented figure on the very screen this story exists to make
+  // honest.
+  it('renders the CI line for an internal-billing org — hidden is what changed, not the bypass', async () => {
+    renderWithBody({ ...withCi({}), internalBilling: true });
+    await waitFor(() => expect(screen.getByText('Internal billing')).toBeTruthy());
+    expect(screen.getByRole('heading', { name: 'Motir CI' })).toBeTruthy();
   });
 });
 
@@ -685,12 +725,12 @@ describe('BillingClient — the Motir Search line', () => {
     expect(screen.queryByText('Search keeps working when your balance runs out.')).toBeNull();
   });
 
-  // ── AC 3 — META ────────────────────────────────────────────────────────────
+  // ── ⚠️ AC 3's META CASE, INVERTED (MOTIR-4572) ─────────────────────────────
 
-  it('renders NO search line for the META org', async () => {
-    renderWithBody(withSearch({ totalSpend: 1204, monthSpend: 312 }, { isMeta: true }));
-    await waitFor(() => expect(screen.getByText('Internal organization')).toBeTruthy());
-    expect(screen.queryByRole('heading', { name: 'Motir Search' })).toBeNull();
+  it('renders the search line for an internal-billing org', async () => {
+    renderWithBody(withSearch({ totalSpend: 1204, monthSpend: 312 }, { internalBilling: true }));
+    await waitFor(() => expect(screen.getByText('Internal billing')).toBeTruthy());
+    expect(screen.getByRole('heading', { name: 'Motir Search' })).toBeTruthy();
   });
 
   // ── AC 6 — the shipped role gating, unchanged ──────────────────────────────

@@ -57,6 +57,7 @@ function dto(over: Partial<OrgUsageDTO> = {}): OrgUsageDTO {
     activeProject: null,
     drill: { workspaces: [], projects: [] },
     isMeta: false,
+    internalBilling: false,
     balance: 914,
     tier: { key: 'basic', name: 'Basic', monthlyCreditAllotment: 1000 },
     totalSpend: 7520,
@@ -162,8 +163,12 @@ describe('searchUsageFigures', () => {
     expect(zero.monthSpend).toBe(0);
   });
 
-  it('renders NO search figures for the META org', () => {
-    expect(searchUsageFigures(dto({ isMeta: true }))).toBeNull();
+  // ⚠️ INVERTED (Story MOTIR-4337 · MOTIR-4572). The META arm returned `null`
+  // because the dashboard showed that org a WORD where a balance belongs, so a
+  // search figure beside it would have been the only number on the page. Every
+  // org renders the real figures now, and search spend is one of them.
+  it('renders the search figures for an internal-billing org', () => {
+    expect(searchUsageFigures(dto({ internalBilling: true }))).not.toBeNull();
   });
 });
 
@@ -280,10 +285,13 @@ describe('the search summary figures', () => {
     expect(screen.queryByText(/couldn’t load/i)).toBeNull();
   });
 
-  it('renders NO search figures for the META org (AC 5)', async () => {
-    await renderUsage(dto({ isMeta: true }));
-    expect(screen.queryByText(sum.searchThisMonth)).toBeNull();
-    expect(screen.getByText(sum.unlimited)).toBeTruthy();
+  it('renders the search figures AND a real balance for an internal-billing org (MOTIR-4572)', async () => {
+    await renderUsage(dto({ internalBilling: true }));
+    expect(screen.getByText(sum.searchThisMonth)).toBeTruthy();
+    // The BALANCE, not the word `Unlimited` — that key is deleted with its
+    // branch. A word where a figure belongs is the shape this story removes.
+    expect(screen.getByText('914')).toBeTruthy();
+    expect(screen.getByText(sum.internalBilling)).toBeTruthy();
   });
 });
 

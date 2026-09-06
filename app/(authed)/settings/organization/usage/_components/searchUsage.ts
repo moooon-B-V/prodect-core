@@ -66,12 +66,17 @@ export interface SearchUsageFigures {
 
 /**
  * The search figures for the dashboard, or `null` when there is NO figure to
- * render — the META org, which shows the "Unlimited" treatment and is never
- * billed.
+ * render.
+ *
+ * ⚠️ THE `isMeta` ARM IS GONE (Story MOTIR-4337 · MOTIR-4572). It returned
+ * `null` because the dashboard showed the meta org an "Unlimited" word instead
+ * of a balance, so a search figure beside it would have been the only number on
+ * a page that claimed none applied. That treatment is deleted: every org now
+ * renders the real figures, and search spend is one of them — the run log, the
+ * per-model breakdown and this block are exactly what the story exists to make
+ * visible to the org that produces most of them.
  */
 export function searchUsageFigures(data: OrgUsageDTO): SearchUsageFigures | null {
-  if (data.isMeta) return null;
-
   // ⚠️ Checked FIRST so it can never fall through into the zero branch. The two
   // are one `if` apart and opposite in meaning.
   //

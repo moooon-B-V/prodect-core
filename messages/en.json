@@ -5311,8 +5311,6 @@
       "monthlySpendSub": "Credits debited per month, org-wide. Last 6 months.",
       "creditsChip": "Credits",
       "creditsUnit": "credits",
-      "unlimited": "Unlimited",
-      "internal": "Internal",
       "searchThisMonth": "Search spend, this month",
       "searchAllTime": "{n} credits all time",
       "searchAttributed": "…of which attributed",
@@ -5320,7 +5318,8 @@
       "searchUnavailable": "Search figures aren’t available right now. Your searches are still being charged — this is the display, not the billing.",
       "searchUnavailableValue": "Unavailable",
       "scopeFollows": "Follows this scope",
-      "scopeOrg": "Whole organization"
+      "scopeOrg": "Whole organization",
+      "internalBilling": "Internal billing"
     },
     "affordance": "Credits are an internal usage allotment — not a currency, and this is not a bill. One planning run debits credits by the tokens it consumed. Buying more credits and plan changes arrive with billing in a later release.",
     "drill": {
@@ -5515,15 +5514,6 @@
       "unavailableValue": "Unavailable",
       "viewRuns": "See which runs spent it"
     },
-    "internal": {
-      "badge": "Internal",
-      "title": "Internal organization",
-      "tagline": "Motir's own workspace — unlimited, never billed.",
-      "subtitle": "{org} is on Motir's internal plan. Every Motir and Motir AI feature is unlimited and there's nothing to bill — this organization is exempt from billing.",
-      "motirLine": "Motir · Unlimited",
-      "aiLine": "Motir AI · Unlimited",
-      "usageNote": "AI usage is still tracked for internal cost visibility on the Usage & cost page."
-    },
     "payment": {
       "title": "Payment & invoices",
       "portal": "Stripe Customer Portal",
@@ -5682,6 +5672,10 @@
         "body": "Planning is paused until the {org} organization's plan is upgraded. Only an organization owner can change the plan or buy credits.",
         "askOwner": "Ask an owner to upgrade"
       }
+    },
+    "internalBilling": {
+      "badge": "Internal billing",
+      "note": "This organization is charged exactly like a customer and then made whole — every figure below is real, and the balance nets to zero."
     }
   },
   "draftWithAi": {

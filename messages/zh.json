@@ -5311,8 +5311,6 @@
       "monthlySpendSub": "全组织每月扣减的额度。最近 6 个月。",
       "creditsChip": "额度",
       "creditsUnit": "额度",
-      "unlimited": "无限制",
-      "internal": "内部",
       "searchThisMonth": "本月搜索花费",
       "searchAllTime": "累计 {n} 积分",
       "searchAttributed": "其中可归因",
@@ -5320,7 +5318,8 @@
       "searchUnavailable": "暂时无法获取搜索数据。你的搜索仍在正常计费——这是显示问题，不是计费问题。",
       "searchUnavailableValue": "暂无数据",
       "scopeFollows": "随当前范围变化",
-      "scopeOrg": "整个组织"
+      "scopeOrg": "整个组织",
+      "internalBilling": "内部计费"
     },
     "affordance": "额度是内部用量配额 —— 不是货币，这也不是账单。每次规划运行按其消耗的 token 扣减额度。购买更多额度与变更套餐将在后续版本随计费功能推出。",
     "drill": {
@@ -5515,15 +5514,6 @@
       "unavailableValue": "暂无数据",
       "viewRuns": "查看是哪些运行产生的"
     },
-    "internal": {
-      "badge": "内部",
-      "title": "内部组织",
-      "tagline": "Motir 自有工作区 —— 无限制，永不计费。",
-      "subtitle": "{org} 使用 Motir 内部方案。Motir 与 Motir AI 的所有功能均无限制，也无需计费 —— 本组织已豁免计费。",
-      "motirLine": "Motir · 无限制",
-      "aiLine": "Motir AI · 无限制",
-      "usageNote": "AI 用量仍会记录，便于在「用量与费用」页面查看内部成本。"
-    },
     "payment": {
       "title": "支付与发票",
       "portal": "Stripe 客户门户",
@@ -5678,6 +5668,10 @@
         "body": "在 {org} 组织升级套餐前，规划将保持暂停。只有组织所有者可以变更套餐或购买额度。",
         "askOwner": "请联系所有者升级"
       }
+    },
+    "internalBilling": {
+      "badge": "内部计费",
+      "note": "该组织与客户完全一样计费，随后被补偿——下方每个数字都是真实的，余额净额为零。"
     }
   },
   "draftWithAi": {
