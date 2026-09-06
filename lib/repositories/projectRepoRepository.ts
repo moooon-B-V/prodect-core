@@ -86,6 +86,10 @@ interface JoinedRow {
   // The realized `github_repo` half — every column NULL when the row is
   // unrealized (or when its mirror row was deleted / is invisible under RLS).
   repoRowId: string | null;
+  repoDefaultBranchHeadSha: string | null;
+  repoIndexedHeadSha: string | null;
+  repoIndexedAt: Date | null;
+  repoIndexingRunId: string | null;
   repoProvider: string | null;
   repoWorkspaceId: string | null;
   /** The mirror row's ORGANISATION (MOTIR-4649) — nullable in the column, and
@@ -152,6 +156,10 @@ function toNested(r: JoinedRow): ProjectRepoWithRealized {
         ? null
         : {
             id: r.repoRowId,
+            defaultBranchHeadSha: r.repoDefaultBranchHeadSha,
+            indexedHeadSha: r.repoIndexedHeadSha,
+            indexedAt: r.repoIndexedAt,
+            indexingRunId: r.repoIndexingRunId,
             provider: r.repoProvider!,
             workspaceId: r.repoWorkspaceId!,
             organizationId: r.repoOrganizationId,
@@ -242,7 +250,18 @@ export const projectRepoRepository = {
         gr."default_branch"    AS "repoDefaultBranch",
         gr."archived"          AS "repoArchived",
         gr."created_at"        AS "repoCreatedAt",
-        gr."updated_at"        AS "repoUpdatedAt"
+        gr."updated_at"        AS "repoUpdatedAt",
+        -- THE INDEX-STATE COLUMNS RIDE ALONG (MOTIR-4724). They are here because
+        -- this projection reconstructs a WHOLE GithubRepo by hand: a column added
+        -- to the model and not added here is a TYPE ERROR rather than a silently
+        -- missing field, which is what makes the hand-built row safe to keep. The
+        -- room does not render them today; the row is honest either way.
+        -- (No backticks in this block: it is inside a tagged template, and one
+        --  would end the literal — which is exactly how this first broke.)
+        gr."default_branch_head_sha" AS "repoDefaultBranchHeadSha",
+        gr."indexed_head_sha"        AS "repoIndexedHeadSha",
+        gr."indexed_at"              AS "repoIndexedAt",
+        gr."indexing_run_id"         AS "repoIndexingRunId"
       FROM "project_repository" pr
       LEFT JOIN "github_repo" gr ON gr."id" = pr."github_repo_id"
       -- The APPROVING USER's record only: permission = 'admin' is what selects it

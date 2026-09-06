@@ -6202,7 +6202,9 @@
         "gitlab": "GitLab"
       },
       "index": {
-        "indexed": "Indexed",
+        "current": "Current",
+        "stale": "Stale",
+        "indexing": "Indexing…",
         "never": "Never indexed"
       },
       "usedBy": "{count, plural, one {Used by # project} other {Used by # projects}}",

@@ -28,12 +28,16 @@ import type { OrgRepoInventoryRowDto } from '@/lib/dto/organizationRepos';
 // when the last project unlinks would re-introduce per-project ownership through
 // the back door and make the next project that adds it pay for a full re-index.
 //
-// ⚠️ THE INDEX COLUMN HAS TWO STATES, NOT THE DESIGN'S FOUR, and that is a
-// measurement rather than an omission — `OrgRepoIndexStateDto` carries the
-// evidence. `Indexed` claims an index HAPPENED; it does not claim the graph is
-// current, because nothing in motir-core can answer that yet. Saying `Current`
-// here would tell a person their index matches their code at the moment they are
-// deciding whether to trust a plan built from it.
+// ⚠️ THE INDEX COLUMN NOW HAS ALL FOUR STATES (MOTIR-4724). It shipped with two
+// — `Indexed` / `Never indexed` — because the substrate could compute two, and
+// the two missing arms were asserted ABSENT rather than faked: saying `Current`
+// for a graph that might be months behind tells a person their index matches
+// their code at the exact moment they are deciding whether to trust a plan built
+// from it. MOTIR-4724 built the substrate; the tone map below is the design's.
+//
+// The state is DERIVED IN ONE PLACE (`lib/codeGraph/indexState.ts`) and this
+// component only chooses a pill for it. A second comparison written here would be
+// a second definition of "stale".
 //
 // ⚠️ THE ROW ACTION NAMES THE ACT, AND A SECOND LINE NAMES THE VENUE.
 // `Disconnect` on both providers — the act is identical and only the venue
@@ -118,8 +122,16 @@ export function RepositoryInventory({
                     {t(`provider.${row.repo.provider}`)}
                   </span>
 
-                  {row.indexState === 'indexed' ? (
-                    <Pill severity="success">{t('index.indexed')}</Pill>
+                  {/* The design's tones: Current mint · Stale peach · Indexing
+                      sky · Never indexed the neutral chip. `indexed` renders as
+                      `Current` because that is what it now MEANS — the graph
+                      matches the head, as last observed. */}
+                  {row.indexState === 'indexing' ? (
+                    <Pill severity="info">{t('index.indexing')}</Pill>
+                  ) : row.indexState === 'stale' ? (
+                    <Pill severity="warning">{t('index.stale')}</Pill>
+                  ) : row.indexState === 'indexed' ? (
+                    <Pill severity="success">{t('index.current')}</Pill>
                   ) : (
                     <Pill tone="neutral">{t('index.never')}</Pill>
                   )}

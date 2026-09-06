@@ -118,29 +118,31 @@ describe('the inventory — one row per connected repository', () => {
   });
 });
 
-describe('⚠️ the INDEX column says only what is KNOWN', () => {
-  it('renders `Indexed` and `Never indexed`', () => {
+describe('the INDEX column — all four states (MOTIR-4724)', () => {
+  it('renders the fixture`s own states', () => {
     renderInventory();
-    expect(screen.getAllByText('Indexed').length).toBeGreaterThan(0);
+    expect(screen.getAllByText('Current').length).toBeGreaterThan(0);
     expect(screen.getByText('Never indexed')).toBeTruthy();
   });
 
-  it('claims NEITHER `Current` NOR `Stale` NOR `Indexing`', () => {
-    // The design draws four states; motir-core can compute two. `stale` needs an
-    // indexed commit compared against a default-branch head and the schema carries
-    // NEITHER column; `indexing` is not attributable at all, because the job
-    // ledger writes `output.repoRef` only on success and says so on itself.
-    //
-    // Rendering `Current` for a graph that may be months behind would tell a
-    // person their index matches their code at the exact moment they are deciding
-    // whether to trust a plan built from it. `Indexed` claims an index HAPPENED
-    // and nothing more.
-    //
-    // This case deletes itself in the commit that adds the substrate.
-    renderInventory();
-    expect(screen.queryByText('Current')).toBeNull();
-    expect(screen.queryByText('Stale')).toBeNull();
-    expect(screen.queryByText(/Indexing/)).toBeNull();
+  it('renders all FOUR states — the substrate MOTIR-4724 built', () => {
+    // ⚠️ THIS CASE REPLACES ITS OWN OPPOSITE, and the replacement is the point.
+    // It read "claims NEITHER `Current` NOR `Stale` NOR `Indexing`" and said it
+    // would delete itself in the commit that added the substrate. This is that
+    // commit — so the assertion INVERTS rather than disappearing, and the pair
+    // records that the two states were withheld deliberately and then earned.
+    renderInventory({
+      rows: [
+        ROW('r1', 'a', ['Atlas'], 'indexed'),
+        ROW('r2', 'b', ['Atlas'], 'stale'),
+        ROW('r3', 'c', ['Atlas'], 'indexing'),
+        ROW('r4', 'd', [], 'never'),
+      ],
+    });
+    expect(screen.getByText('Current')).toBeTruthy();
+    expect(screen.getByText('Stale')).toBeTruthy();
+    expect(screen.getByText('Indexing…')).toBeTruthy();
+    expect(screen.getByText('Never indexed')).toBeTruthy();
   });
 });
 

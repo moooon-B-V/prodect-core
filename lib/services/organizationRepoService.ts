@@ -12,6 +12,7 @@ import { githubInstallationService } from '@/lib/services/githubInstallationServ
 import { codeGraphOffboardingService } from '@/lib/services/codeGraphOffboardingService';
 import { projectRepository } from '@/lib/repositories/projectRepository';
 import { jobRunRepository } from '@/lib/repositories/jobRunRepository';
+import { deriveCodeGraphIndexState } from '@/lib/codeGraph/indexState';
 import { workspaceRepository } from '@/lib/repositories/workspaceRepository';
 import { withSystemContext } from '@/lib/workspaces/context';
 import { toProjectRepoDto } from '@/lib/mappers/projectRepoMappers';
@@ -226,10 +227,16 @@ export const organizationRepoService = {
    * disclosure argument: a dialog computing its own could disagree with the row a
    * person had been looking at all week.
    *
-   * ⚠️ THE INDEX STATE IS TWO VALUES, AND THE MISSING TWO ARE A MEASUREMENT
-   * rather than an omission — see {@link OrgRepoIndexStateDto}. `indexed` claims
-   * an index HAPPENED; it does not claim the graph is current, because nothing in
-   * motir-core can answer that yet.
+   * ⚠️ THE INDEX STATE IS ALL FOUR NOW (MOTIR-4724), and it is DERIVED IN ONE
+   * PLACE — `deriveCodeGraphIndexState`. This service assembles the facts and
+   * reads none of them itself: a second comparison written here would be a second
+   * definition of "stale", and the whole point of that module is that the
+   * organisation inventory and the `Code` page cannot disagree about the word.
+   *
+   * Two of the three facts are columns on the repo row. The third — is a
+   * `running` index run still running — is resolved against the LEDGER rather
+   * than off the column, because `indexing_run_id` is a pointer and a crashed run
+   * would otherwise leave a row reading `Indexing…` for ever.
    *
    * The ledger is workspace-keyed and this is an organisation, so the refs are
    * gathered per workspace under system context — the same read
@@ -244,7 +251,7 @@ export const organizationRepoService = {
       (tx) => resolveOrganizationId(ctx.workspaceId, tx),
     );
 
-    const indexedRefs = await withSystemContext(async (tx) => {
+    const { indexedRefs, runningRunIds } = await withSystemContext(async (tx) => {
       const workspaces = await workspaceRepository.listByOrganization(organizationId, tx);
       const refs = new Set<string>();
       for (const workspace of workspaces) {
@@ -255,7 +262,14 @@ export const organizationRepoService = {
           refs.add(ref);
         }
       }
-      return refs;
+      // WHICH claimed runs are actually still running. One read for the whole
+      // inventory rather than one per row, and it is what makes a crashed run
+      // self-healing: an `abandoned` row is simply not in this set.
+      const running = await tx.jobRun.findMany({
+        where: { functionId: 'system.code-graph-index', status: 'running' },
+        select: { id: true },
+      });
+      return { indexedRefs: refs, runningRunIds: new Set(running.map((r) => r.id)) };
     });
 
     const repos = await withWorkspaceContext(
@@ -270,7 +284,12 @@ export const organizationRepoService = {
     return usage.flatMap((row) => {
       const repo = byId.get(row.githubRepoId);
       if (!repo) return [];
-      const indexState: OrgRepoIndexStateDto = indexedRefs.has(row.repoRef) ? 'indexed' : 'never';
+      const indexState: OrgRepoIndexStateDto = deriveCodeGraphIndexState({
+        hasSucceededIndex: indexedRefs.has(row.repoRef),
+        defaultBranchHeadSha: repo.defaultBranchHeadSha,
+        indexedHeadSha: repo.indexedHeadSha,
+        hasRunningIndex: repo.indexingRunId !== null && runningRunIds.has(repo.indexingRunId),
+      });
       return [{ repo: toOrgRepoOptionDto(repo), projects: row.projects, indexState }];
     });
   },

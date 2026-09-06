@@ -1,3 +1,5 @@
+import type { CodeGraphIndexState } from '@/lib/codeGraph/indexState';
+
 // DTO types for the ORGANISATION's repository inventory (Story MOTIR-4669 ·
 // MOTIR-4678) — the shape the `Add repository` picker's first segment binds to.
 // No Prisma row leaks; every `Date` is an ISO string.
@@ -67,31 +69,26 @@ export interface OrgRepoUsageDto {
 }
 
 /**
- * WHAT MOTIR KNOWS ABOUT A REPOSITORY'S CODE INDEX — and it is deliberately two
- * values, not the four the design draws (Story MOTIR-4669 · MOTIR-4680).
+ * WHAT MOTIR KNOWS ABOUT A REPOSITORY'S CODE INDEX (Story MOTIR-4669).
  *
- * ⚠️ `stale` AND `indexing` ARE ABSENT BECAUSE THEY HAVE NO PRODUCER, not because
- * they were forgotten. Both were measured against `origin/main` and both are
- * blocked by properties the owning code documents about ITSELF:
+ * ⚠️ THIS WAS TWO VALUES AND IS NOW FOUR (MOTIR-4680 → MOTIR-4724), and the
+ * history is worth keeping because it is the argument for the shape.
  *
- *   - **stale** needs the indexed commit compared against the default-branch
- *     head. `prisma/schema.prisma` carries NEITHER column.
- *     `jobRunRepository.listSucceededCodeGraphIndexRepoRefs` says so in its own
- *     words: *"Staleness (graph commit vs the default-branch head) is
- *     MOTIR-1754/1766's axis and deliberately not read here."*
- *   - **indexing** is NOT ATTRIBUTABLE. `findRunningCodeGraphIndexForWorkspace`
- *     says it: *"a `running` row has no `output.repoRef` … so the ledger cannot
- *     say WHICH repo a running row belongs to — only that one is in flight."*
- *     `FleetInFlightSlot.ref` is the index-RUN id, not a repository.
+ * MOTIR-4680 shipped `indexed | never` and asserted the absence of the other two,
+ * because both were blocked by properties the owning code documents about itself:
+ * `stale` needed an indexed commit and a default-branch head and the schema
+ * carried NEITHER column, and `indexing` was not attributable at all, because the
+ * job ledger writes `output.repoRef` only on success. Rendering `Current` under
+ * those conditions would have told a person their index matched their code at the
+ * exact moment they were deciding whether to trust a plan built from it — a wrong
+ * answer, not a missing feature.
  *
- * Rendering `Current` for a repository whose graph may be months behind would
- * tell a person their index matches their code at the exact moment they are
- * deciding whether to trust a plan built from it. That is not a missing feature;
- * it is a wrong answer. So this union says only what is known — `indexed` claims
- * an index HAPPENED, never that it is current — and the two missing arms arrive
- * with their substrate.
+ * MOTIR-4724 built the substrate rather than the appearance of it: two shas, an
+ * in-flight pointer, and ONE derivation (`lib/codeGraph/indexState.ts`) that every
+ * surface reads. The union is that function's return type, re-exported here so a
+ * DTO consumer binds to the same four names the derivation produces.
  */
-export type OrgRepoIndexStateDto = 'indexed' | 'never';
+export type OrgRepoIndexStateDto = CodeGraphIndexState;
 
 /** One row of the organisation's repository inventory (MOTIR-4680). */
 export interface OrgRepoInventoryRowDto {

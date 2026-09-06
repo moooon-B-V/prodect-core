@@ -5713,12 +5713,12 @@ model GithubInstallation {
 /// internal installation modelled on BOTH sides (the FK-`@relation` rule). Read
 /// through the GitProvider seam as a NormalizedRepo (owner/name/defaultBranch).
 model GithubRepo {
-  id             String   @id @default(cuid())
+  id             String  @id @default(cuid())
   /// Provider discriminator — always "github" for these rows.
-  provider       String   @default("github")
+  provider       String  @default("github")
   /// FK → GithubInstallation.id (the internal cuid, NOT GitHub's numeric
   /// installation id). The parent installation this repo was selected on.
-  installationId String   @map("installation_id")
+  installationId String  @map("installation_id")
   /// WHOSE this repo is (MOTIR-1931). Tenancy is a property of the REPOSITORY,
   /// not of the installation: Motir's provisioning org holds every tenant's
   /// created repos behind ONE installation, so workspace A's repo and workspace
@@ -5726,7 +5726,7 @@ model GithubRepo {
   /// ONLY tenancy read — the installation still SELECTS which mirror rows a
   /// delivery may touch, the repo row ATTRIBUTES them. Mirrors `ProjectRepo`,
   /// which already gates on its own `workspace_id` rather than a join through.
-  workspaceId    String   @map("workspace_id")
+  workspaceId    String  @map("workspace_id")
   /// WHOSE this repository is, at the tier that actually owns it (Story
   /// MOTIR-4669 · MOTIR-4649). A repository is connected ONCE, to the
   /// ORGANISATION, and which projects use it is visibility configuration —
@@ -5751,12 +5751,12 @@ model GithubRepo {
   /// the way that matters, because nothing in its diff would say whether a
   /// failure came from the column or from the policy, and one of those two
   /// failure modes is a data-exposure bug.
-  organizationId String?  @map("organization_id")
+  organizationId String? @map("organization_id")
   /// GitHub's numeric repository id (as a string) — stable across renames.
-  repoId         String   @map("repo_id")
+  repoId         String  @map("repo_id")
   owner          String
   name           String
-  defaultBranch  String   @map("default_branch")
+  defaultBranch  String  @map("default_branch")
   /// Whether the repository is ARCHIVED on the host (MOTIR-1959). An archived
   /// repo is READ-ONLY: it rejects a push and a pull request from an admin, so a
   /// card resolving to one dispatches an agent that cannot open a PR at all.
@@ -5773,9 +5773,58 @@ model GithubRepo {
   /// `@default(false)` rather than nullable: every pre-existing row was accepted
   /// as live, and `false` says exactly that — "not known to be archived" — with no
   /// backfill pass and no third state for consumers to interpret.
-  archived       Boolean  @default(false)
-  createdAt      DateTime @default(now()) @map("created_at")
-  updatedAt      DateTime @updatedAt @map("updated_at")
+  archived       Boolean @default(false)
+
+  /// THE DEFAULT BRANCH'S CURRENT HEAD, as the push webhook last saw it (Story
+  /// MOTIR-4669 · MOTIR-4724).
+  ///
+  /// Half of "is the code graph behind the code". `handlePush` already PARSES
+  /// this — `NormalizedPushEvent.headSha` — and discarded it, so persisting it is
+  /// a field write on a delivery Motir already handles rather than a new call to
+  /// anyone. That is what makes staleness a comparison of two local columns
+  /// instead of a GitHub API call per repository on every page render.
+  ///
+  /// NULL until the first push after this migration. A null means "not known
+  /// yet", never "up to date": the derivation reads it as UNKNOWN and reports the
+  /// repository as `indexed` rather than inventing a `stale` from missing data.
+  defaultBranchHeadSha String? @map("default_branch_head_sha")
+
+  /// THE HEAD THE CODE GRAPH WAS BUILT FROM — the other half.
+  ///
+  /// ⚠️ IT IS THE HEAD OBSERVED WHEN THE INDEX RUN STARTED, not when it finished,
+  /// and the direction of that imprecision is deliberate. The index job reads the
+  /// default branch's CURRENT head at run time (`githubWebhookService.handlePush`
+  /// says so in its own words), so a push landing DURING a run leaves this value
+  /// behind the new head — and the repository then reads `stale`. The opposite
+  /// choice (stamp at finish) would read `indexed` for a graph that had already
+  /// missed a commit. Over-reporting staleness costs a re-index; under-reporting
+  /// it tells somebody their graph matches their code while they decide whether
+  /// to trust a plan built from it.
+  ///
+  /// motir-core does NOT receive the indexed commit from motir-ai — the boundary
+  /// reports no sha — so this is the closest thing motir-core can know, and it is
+  /// exact except across that one window.
+  indexedHeadSha String?   @map("indexed_head_sha")
+  /// When that index succeeded. Renders "indexed <when>"; never used for staleness,
+  /// which is a SHA comparison — a timestamp cannot tell a quiet repo from a stale one.
+  indexedAt      DateTime? @map("indexed_at")
+
+  /// The `job_run.id` of an index run IN FLIGHT for this repository, or null.
+  ///
+  /// ⚠️ THIS EXISTS BECAUSE THE LEDGER CANNOT ANSWER IT.
+  /// `jobRunRepository.findRunningCodeGraphIndexForWorkspace` states the reason on
+  /// itself: a `running` row has no `output.repoRef`, because the job writes
+  /// `output` only on success — so the ledger knows that A run is in flight and
+  /// never WHICH repository it is for.
+  ///
+  /// ⚠️ IT IS A POINTER, NOT A STATE, and that is what makes a crashed run
+  /// self-healing. The derivation reports `indexing` only when the run it names is
+  /// still `running`; a run that died leaves this column set and the row reads
+  /// whatever its shas say, because an abandoned run is not an index in progress.
+  indexingRunId String? @map("indexing_run_id")
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
 
   installation                GithubInstallation           @relation(fields: [installationId], references: [id], onDelete: Cascade)
   /// The owning tenant (MOTIR-1931) — modelled on BOTH sides, like every other FK
