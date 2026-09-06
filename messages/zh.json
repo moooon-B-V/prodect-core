@@ -7182,7 +7182,6 @@
       "monitoring": "监控",
       "governance": "治理",
       "soonUsage": "10.1",
-      "soonTenants": "10.1",
       "soonGovernance": "10.3"
     },
     "topBar": {
@@ -7286,6 +7285,10 @@
             "password_reset_sent": "已发送密码重置",
             "suspend": "已停用",
             "unsuspend": "已解除停用"
+          },
+          "org": {
+            "internal_billing_set": "已标记为内部计费",
+            "internal_billing_unset": "已移除内部计费标记"
           }
         }
       }
@@ -7388,6 +7391,43 @@
         "colLastFired": "上次触发",
         "colExpected": "应触发于",
         "never": "从未"
+      }
+    },
+    "orgs": {
+      "breadcrumb": "平台 · 租户",
+      "breadcrumbAria": "面包屑导航",
+      "crumbPlatform": "平台",
+      "crumbTenants": "租户",
+      "title": "组织",
+      "subtitle": "按名称或标识查找组织。打开任一组织都会记录一次跨租户读取。",
+      "searchLabel": "名称或标识",
+      "searchPlaceholder": "moooon、acme、northwind…",
+      "searchSubmit": "搜索",
+      "tooShort": "请至少输入 {n} 个字符。",
+      "idleTitle": "搜索组织",
+      "idleDescription": "在上方输入名称或标识。最多显示 {n} 条；你打开的每一条都会记入审计日志。",
+      "noneTitle": "没有匹配“{query}”的组织",
+      "noneDescription": "请检查拼写，或改用标识搜索。若某个组织确实存在却未显示，那是缺陷——此查找会读取全部租户，而不只是你所属的那些。",
+      "resultsTitle": "结果",
+      "resultsCount": "{n} 个组织",
+      "capped": "仅显示前 {n} 条匹配。请缩小查询范围以查看其余结果。",
+      "auditBanner": "你正以平台staff身份查看 {name}。此次跨租户读取已记入审计日志（操作者 {operator}）。",
+      "createdAt": "创建于 {at}",
+      "paidAiPlan": "付费 AI 套餐",
+      "scaledTracker": "按席位订阅",
+      "internalBillingNote": "该组织与客户完全一样计费，随后被补偿：每一笔扣费都会照常发生，并在同一事务中配上一笔等额抵扣，因此余额净额为零，而两侧条目都保持可见。",
+      "chip": {
+        "isMeta": "isMeta",
+        "internalBilling": "internalBilling"
+      },
+      "pending": {
+        "usageTitle": "用量与成本",
+        "usageEmptyTitle": "尚未构建",
+        "membersTitle": "成员",
+        "membersEmptyTitle": "尚未构建",
+        "jobsTitle": "最近作业",
+        "jobsEmptyTitle": "尚未构建",
+        "broughtBy": "该面板属于 {owner}。此处画作预留区域而非占位数字——写个 0 会看起来像一个答案。"
       }
     }
   },
