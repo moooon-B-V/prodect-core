@@ -505,6 +505,120 @@
         color: var(--el-text-secondary);
       }
 
+      /* ---- MOTIR-4755 · a step that did NOT run, in its TWO kinds ----------
+         Two rows can both mean "this step did not happen" and mean opposite
+         things, so they may not share a treatment — and neither may share the
+         DONE tick, which says the user did the step.
+
+         SATISFIED — Motir read the substrate and did not need to ask. The
+         signal is a sky tint (distinct from done's mint and from optional's
+         dashed outline) plus a READ glyph, because what happened is that
+         something was read.
+
+         SKIPPED — the user pressed a control. Neutral muted fill and a DASH:
+         nothing happened here, and nobody is claiming otherwise. */
+      .step.satisfied .marker {
+        background: var(--el-tint-sky);
+        color: var(--el-text-strong);
+        border: 1px solid var(--el-border);
+      }
+      .step.satisfied .s-name {
+        color: var(--el-text-strong);
+      }
+      .step.skipped .marker {
+        background: var(--el-muted);
+        color: var(--el-text-secondary);
+        border: 1px solid var(--el-border);
+      }
+      .step.skipped .s-name {
+        color: var(--el-text-secondary);
+      }
+
+      /* The PROVENANCE line — a STATEMENT, never a question and never a
+         control. It says what Motir planned from, on the surface the user
+         lands on, so a plan that came out thin can be understood rather than
+         only disagreed with. Ink is `--el-text-secondary` (6.51:1 on
+         `--el-surface-soft`); `--el-text-muted` would be 4.34:1 and fail. */
+      .provenance {
+        display: flex;
+        gap: 10px;
+        align-items: flex-start;
+        background: var(--el-surface-soft);
+        border: 1px solid var(--el-border);
+        border-radius: var(--radius-card);
+        padding: 12px 14px;
+        font-size: 12.5px;
+        line-height: 1.5;
+        color: var(--el-text-secondary);
+      }
+      .provenance svg {
+        width: 15px;
+        height: 15px;
+        flex: none;
+        margin-top: 1px;
+        color: var(--el-text-secondary);
+      }
+      .provenance b {
+        color: var(--el-text-strong);
+        font-weight: 600;
+      }
+
+      /* The ACCESS PATH — the entrance tile the user presses to arrive here.
+         Reproduces `design/onboarding-entrance/`'s existing-project choice at
+         board scale so a reader SEES the door, not only the room. */
+      .door {
+        display: flex;
+        gap: 12px;
+        align-items: flex-start;
+        background: var(--el-card);
+        border: 1px solid var(--el-border);
+        border-radius: var(--radius-card);
+        padding: 14px 16px;
+        max-width: 420px;
+      }
+      .door .d-ic {
+        flex: none;
+        width: 30px;
+        height: 30px;
+        display: grid;
+        place-items: center;
+        border-radius: var(--radius-control);
+        background: var(--el-card-icon-bg);
+        color: var(--el-card-icon-fg);
+      }
+      .door .d-ic svg {
+        width: 16px;
+        height: 16px;
+      }
+      .door .d-name {
+        font-size: 13.5px;
+        font-weight: 600;
+        color: var(--el-text-strong);
+      }
+      .door .d-body {
+        font-size: 12px;
+        color: var(--el-text-secondary);
+        line-height: 1.45;
+        margin-top: 3px;
+        display: block;
+      }
+      .rail-mini {
+        border: 1px solid var(--el-border);
+        border-radius: var(--radius-card);
+        background: var(--el-surface);
+        padding: 14px 12px;
+      }
+      .triptych {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 14px;
+      }
+      @media (max-width: 900px) {
+        .triptych {
+          grid-template-columns: 1fr;
+        }
+      }
+
       /* ---- the CONTENT region ---- */
       .content {
         padding: 24px 30px 22px;
@@ -2668,6 +2782,391 @@
         </div>
       </div>
 
+      <div class="panel-label">
+        Panel 5 · A step SATISFIED BY THE SUBSTRATE — the discovery row's third state
+        <b
+          >(NEW · MOTIR-4755 · the FLOOR rail unchanged beside it · the provenance line · the
+          door)</b
+        >
+      </div>
+      <div class="panel">
+        <p class="muted-note" style="margin: 0 0 14px">
+          A step can fail to run for two opposite reasons, and a wizard that dresses them alike
+          tells the user they passed on something they were never shown. <strong>SKIPPED</strong> is
+          theirs — they were offered a thing and declined it. <strong>SATISFIED</strong> is Motir's
+          — it read their repository and their backlog and did not need to ask. Neither may borrow
+          the <strong>done</strong> tick, which says the user did the step.
+        </p>
+        <div class="triptych">
+          <div>
+            <div class="state-cap">1 · Pending — the interview runs</div>
+            <nav class="rail rail-mini" aria-label="Migration steps">
+              <div class="rail-title">Your migration</div>
+              <div class="rail-sub">Four questions about your direction.</div>
+              <div class="rail-group">Set up your codebase</div>
+              <div class="step done">
+                <span class="marker" aria-hidden="true"
+                  ><svg
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="3"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                  >
+                    <path d="m20 6-11 11-5-5" /></svg></span
+                ><span
+                  ><span class="s-name">Connect</span><span class="s-meta">acme/widgets</span></span
+                >
+              </div>
+              <div class="step done">
+                <span class="marker" aria-hidden="true"
+                  ><svg
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="3"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                  >
+                    <path d="m20 6-11 11-5-5" /></svg></span
+                ><span><span class="s-name">Index</span></span>
+              </div>
+              <div class="rail-group">Import your work <span class="opt">optional</span></div>
+              <div class="step done">
+                <span class="marker" aria-hidden="true"
+                  ><svg
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="3"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                  >
+                    <path d="m20 6-11 11-5-5" /></svg></span
+                ><span
+                  ><span class="s-name">Import work items</span
+                  ><span class="s-meta">214 items imported</span></span
+                >
+              </div>
+              <div class="rail-group">Your direction</div>
+              <div class="step current" aria-current="step">
+                <span class="marker" aria-hidden="true"
+                  ><svg
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="2.5"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                  >
+                    <path d="M9.1 9a3 3 0 0 1 5.8 1c0 2-3 3-3 3" />
+                    <path d="M12 17h.01" /></svg></span
+                ><span
+                  ><span class="s-name">A few questions</span
+                  ><span class="s-meta">What you're building, and who for</span></span
+                >
+              </div>
+            </nav>
+            <p class="muted-note" style="margin-top: 9px">
+              <strong>ONE row, and it never names a tier.</strong> Discovery / vision / feasibility
+              / validation are the planner's identifiers for questions the user is simply being
+              asked; a rail that lists them by name teaches a stranger four words before it tells
+              them anything. The row says what it IS — a few questions — and the meta line says what
+              they are about.
+            </p>
+          </div>
+          <div>
+            <div class="state-cap">2 · User-SKIPPED (import, for contrast)</div>
+            <nav class="rail rail-mini" aria-label="Migration steps">
+              <div class="rail-title">Your migration</div>
+              <div class="rail-sub">Four questions about your direction.</div>
+              <div class="rail-group">Set up your codebase</div>
+              <div class="step done">
+                <span class="marker" aria-hidden="true"
+                  ><svg
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="3"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                  >
+                    <path d="m20 6-11 11-5-5" /></svg></span
+                ><span
+                  ><span class="s-name">Connect</span><span class="s-meta">acme/widgets</span></span
+                >
+              </div>
+              <div class="step done">
+                <span class="marker" aria-hidden="true"
+                  ><svg
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="3"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                  >
+                    <path d="m20 6-11 11-5-5" /></svg></span
+                ><span><span class="s-name">Index</span></span>
+              </div>
+              <div class="rail-group">Import your work <span class="opt">optional</span></div>
+              <div class="step skipped">
+                <span class="marker" aria-hidden="true"
+                  ><svg
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="2.5"
+                    stroke-linecap="round"
+                  >
+                    <path d="M5 12h14" /></svg></span
+                ><span
+                  ><span class="s-name">Import work items</span
+                  ><span class="s-meta">You skipped this</span></span
+                >
+              </div>
+              <div class="rail-group">Your direction</div>
+              <div class="step current" aria-current="step">
+                <span class="marker" aria-hidden="true"
+                  ><svg
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="2.5"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                  >
+                    <path d="M9.1 9a3 3 0 0 1 5.8 1c0 2-3 3-3 3" />
+                    <path d="M12 17h.01" /></svg></span
+                ><span
+                  ><span class="s-name">A few questions</span
+                  ><span class="s-meta">What you're building, and who for</span></span
+                >
+              </div>
+            </nav>
+            <p class="muted-note" style="margin-top: 9px">
+              A control the user pressed. Muted fill, a <strong>dash</strong>, and the meta line
+              says whose choice it was. It is deliberately NOT the done tick the shipped rail gives
+              a skipped import today.
+            </p>
+          </div>
+          <div>
+            <div class="state-cap">3 · SATISFIED by the substrate</div>
+            <nav class="rail rail-mini" aria-label="Migration steps">
+              <div class="rail-title">Your migration</div>
+              <div class="rail-sub">Motir read what you brought — nothing to answer here.</div>
+              <div class="rail-group">Set up your codebase</div>
+              <div class="step done">
+                <span class="marker" aria-hidden="true"
+                  ><svg
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="3"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                  >
+                    <path d="m20 6-11 11-5-5" /></svg></span
+                ><span
+                  ><span class="s-name">Connect</span><span class="s-meta">acme/widgets</span></span
+                >
+              </div>
+              <div class="step done">
+                <span class="marker" aria-hidden="true"
+                  ><svg
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="3"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                  >
+                    <path d="m20 6-11 11-5-5" /></svg></span
+                ><span><span class="s-name">Index</span></span>
+              </div>
+              <div class="rail-group">Import your work <span class="opt">optional</span></div>
+              <div class="step done">
+                <span class="marker" aria-hidden="true"
+                  ><svg
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="3"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                  >
+                    <path d="m20 6-11 11-5-5" /></svg></span
+                ><span
+                  ><span class="s-name">Import work items</span
+                  ><span class="s-meta">214 items imported</span></span
+                >
+              </div>
+              <div class="rail-group">Your direction</div>
+              <div class="step satisfied">
+                <span class="marker" aria-hidden="true"
+                  ><svg
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="2"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                  >
+                    <path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z" />
+                    <path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z" /></svg></span
+                ><span
+                  ><span class="s-name">Answered from your project</span
+                  ><span class="s-meta">Your code and your backlog said it</span></span
+                >
+              </div>
+            </nav>
+            <p class="muted-note" style="margin-top: 9px">
+              Sky tint and a <strong>read</strong> glyph — what happened is that something was read.
+              <strong>The NAME carries the outcome here</strong>, because a row the user never saw
+              has to explain itself in the place they meet it: <em>Answered from your project</em>,
+              and the meta line says which part of it answered.
+            </p>
+          </div>
+        </div>
+
+        <div class="states-grid" style="margin-top: 22px">
+          <div>
+            <div class="state-cap">The FLOOR — nothing to read, so every step runs</div>
+            <nav class="rail rail-mini" aria-label="Migration steps">
+              <div class="rail-title">Your migration</div>
+              <div class="rail-sub">Four questions about your direction.</div>
+              <div class="rail-group">Set up your codebase</div>
+              <div class="step upcoming">
+                <span class="marker">1</span
+                ><span
+                  ><span class="s-name">Connect</span
+                  ><span class="s-meta">Nothing connected yet</span></span
+                >
+              </div>
+              <div class="step upcoming">
+                <span class="marker">2</span><span><span class="s-name">Index</span></span>
+              </div>
+              <div class="rail-group">Import your work <span class="opt">optional</span></div>
+              <div class="step optional">
+                <span class="marker" aria-hidden="true"
+                  ><svg
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="2"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                  >
+                    <path d="M12 3v13" />
+                    <path d="m7 12 5 4 5-4" />
+                    <path d="M5 21h14" /></svg></span
+                ><span
+                  ><span class="s-name">Import work items</span
+                  ><span class="s-meta">Optional</span></span
+                >
+              </div>
+              <div class="rail-group">Your direction</div>
+              <div class="step current" aria-current="step">
+                <span class="marker" aria-hidden="true"
+                  ><svg
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="2.5"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                  >
+                    <path d="M9.1 9a3 3 0 0 1 5.8 1c0 2-3 3-3 3" />
+                    <path d="M12 17h.01" /></svg></span
+                ><span
+                  ><span class="s-name">A few questions</span
+                  ><span class="s-meta">What you're building, and who for</span></span
+                >
+              </div>
+            </nav>
+            <p class="muted-note" style="margin-top: 9px">
+              No repository and no backlog. <strong>Nothing about this rail moves</strong>: the
+              questions are asked, in full, and no state above is reachable from here. Note the
+              set-up rows are <em>upcoming</em> and <em>optional</em>, NOT skipped —
+              <strong>connect and index have no skip control</strong>, so a dash on them would draw
+              a state the machine cannot produce. Skipped is a thing the user PRESSED.
+            </p>
+          </div>
+          <div>
+            <div class="state-cap">The hand-off — the PROVENANCE line</div>
+            <div class="card" style="padding: 16px">
+              <div class="step-eyebrow">Your plan is ready</div>
+              <h3 style="margin: 4px 0 10px; font-size: 16px">42 work items, across 6 epics</h3>
+              <div class="provenance">
+                <svg
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="2"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                >
+                  <circle cx="12" cy="12" r="10" />
+                  <path d="M12 16v-4" />
+                  <path d="M12 8h.01" />
+                </svg>
+                <span
+                  >Motir planned from <b>acme/widgets</b> and <b>214 imported work items</b>, so it
+                  did not ask you the direction questions. Everything below is a proposal — change
+                  anything before you add it.</span
+                >
+              </div>
+              <div style="display: flex; gap: 10px; margin-top: 14px">
+                <button class="btn primary sm" type="button">Review the plan</button>
+                <button class="btn ghost sm" type="button">Answer the questions anyway</button>
+              </div>
+            </div>
+            <p class="muted-note" style="margin-top: 9px">
+              A <strong>statement</strong>, not a question and not a confirmation: the decision is
+              the planner's and the user reviews the plan it produced, so this is provenance rather
+              than a gate. The second button is the user's way back to the interview — it is an
+              escape, not an approval the flow waits on.
+            </p>
+          </div>
+        </div>
+
+        <div style="margin-top: 22px">
+          <div class="state-cap">THE ACCESS PATH — the door the user comes through</div>
+          <div class="door">
+            <span class="d-ic" aria-hidden="true"
+              ><svg
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+              >
+                <path d="M3 5a2 2 0 0 1 2-2h14v18H5a2 2 0 0 1-2-2z" />
+                <path d="M19 17H5" /></svg
+            ></span>
+            <span
+              ><span class="d-name">I have an existing project — migrate it</span>
+              <span class="d-body"
+                >Connect your repository and Motir reads your code, then plans on top of what's
+                already there. You can also bring over existing work items from Jira, Linear or
+                Plane.</span
+              ></span
+            >
+          </div>
+          <p class="muted-note" style="margin-top: 9px; max-width: 620px">
+            The existing-project choice on <span class="code">/onboarding</span> (composes
+            <span class="code">design/onboarding-entrance/</span>), drawn with its SHIPPED copy
+            verbatim — <span class="code">onboarding.entrance.importTitle</span> /
+            <span class="code">importDesc</span>. The user still presses it, and
+            <strong>it is no longer the only way in</strong>: per MOTIR-4756 the entrance now ROUTES
+            a project with a connected repository here by DEFAULT, which is the journey this panel
+            is about. <strong>This card amends no entrance copy</strong> — the door already promises
+            that Motir reads the code first, which is the promise the rail below then keeps.
+          </p>
+        </div>
+      </div>
       <p class="muted-note" style="max-width: 1120px; margin: 14px auto 0">
         Every step persists its result — including <strong>per-repo index status</strong> and
         per-repo convention approval (MOTIR-1499's <span class="code">MigrateOnboarding</span> state
