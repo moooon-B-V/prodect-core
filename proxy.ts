@@ -157,7 +157,17 @@ export async function proxy(request: NextRequest) {
   const sessionCookie = getSessionCookie(request);
   if (!sessionCookie) {
     const signInUrl = new URL('/sign-in', request.url);
-    signInUrl.searchParams.set('next', request.nextUrl.pathname);
+    // ⚠️ THE SEARCH STRING IS PART OF THE DESTINATION (MOTIR-4725). This used to
+    // set the PATHNAME alone, which cost a filtered list its filter and — since
+    // the planning workspace became an OVERLAY whose whole open state lives in
+    // the query — costs a shared planner link the planner itself: a signed-out
+    // reader following `/backlog?plan=project&planFrom=project` arrived at a bare
+    // backlog with nothing to say what they had been sent to see. The value is
+    // the same one the `x-current-path` header below carries for the signed-in
+    // half of this function, and it stays a same-origin PATH, which is what
+    // `sanitizeNextPath` (`lib/navigation/nextDestination.ts`) admits — a query
+    // has always been legal in it (`/device?user_code=…` is the older instance).
+    signInUrl.searchParams.set('next', `${request.nextUrl.pathname}${request.nextUrl.search}`);
     return NextResponse.redirect(signInUrl);
   }
 
