@@ -435,14 +435,14 @@ it supersedes the separate per-story designs `7.11.1`/`MOTIR-898` +
 > pattern for the rest came from. The `.png` re-exported at byte-identical
 > dimensions (`EXACT 1200x900@2x`, 2400×10856).
 
-| Sheet | What it shows                                                                                                                                   |
-| ----- | ----------------------------------------------------------------------------------------------------------------------------------------------- |
-| **1** | The shell — full-screen two-pane workspace (canvas left · chat right), no app nav                                                               |
-| **2** | Chat-to-plan — proposed cards land on the canvas one-by-one, with edges, pending until Confirm (confirm-to-persist)                             |
-| **3** | The four MODES (generation / re-plan / contextual / roadmap-read) as STATES of the one surface, each tied to its entrance door                  |
-| **4** | The universal entrance — BOTH hero affordances: the header "Plan with AI" pill + the floating Motir callout; context → mode adapts              |
-| **5** | Style-aware — the "Plan with AI" control rendered special in each `data-style` (Editorial / Soft / Swiss / Brutalism / Glass / Cybercore)       |
-| **6** | Opening & exiting — a full-screen overlay ON TOP of the app; Close (✕ / Esc / "Back to …") + the confirm-to-persist guard on close-with-pending |
+| Sheet | What it shows                                                                                                                                                                                                                                                                                 |
+| ----- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **1** | The shell — full-screen two-pane workspace (canvas left · chat right), no app nav                                                                                                                                                                                                             |
+| **2** | Chat-to-plan — proposed cards land on the canvas one-by-one, with edges, pending until Confirm (confirm-to-persist)                                                                                                                                                                           |
+| **3** | The four MODES (generation / re-plan / contextual / roadmap-read) as STATES of the one surface, each tied to its entrance door                                                                                                                                                                |
+| **4** | The universal entrance — BOTH hero affordances: the header "Plan with AI" pill + the floating Motir callout; context → mode adapts                                                                                                                                                            |
+| **5** | Style-aware — the "Plan with AI" control rendered special in each `data-style` (Editorial / Soft / Swiss / Brutalism / Glass / Cybercore)                                                                                                                                                     |
+| **6** | Opening & exiting — the workspace as the shipped `Modal size="full"`, EDGE TO EDGE over the page you are on: the four exits, the NAMESPACED query contract, the cold deep link + signed-out hop, the close-with-pending guard, every state, and the doors before/after (AMENDED — MOTIR-4726) |
 
 ### ⚠️ SCOPE — this designs the SHELL + ENTRANCE, NOT the canvas pane
 
@@ -1230,33 +1230,264 @@ them.
 
 ### ⚠️ Opening & exiting — a full-screen overlay ON TOP of the app (sheet 6)
 
+> **⚠️ AMENDED 2026-09-06 — MOTIR-4726, under story [MOTIR-4725](motir:cmtpk3r2z0096hvn8v7lav9wi).**
+> This section said the right thing and drew nothing a code card could build to. What ships today
+> is a **route** — `app/(planning)/layout.tsx` + `planning/page.tsx`, the host MOTIR-1729 built,
+> whose own header says why: _"The design's overlay keeps the origin screen mounted behind it;
+> this host is a ROUTE (the card's deliverable), so 'returns you to where you launched from' is a
+> navigation back to that route."_ The amendment does not change the sentence below; it draws it
+> as the parts the product NOW HAS — the shipped `Modal size="full"`, its scrim, `shallowPush`,
+> and the run modal (`design/runs/` § _The run MODAL_) that already answered the two-`Esc`
+> question — and it settles the three things no code card can settle for itself: the overlay's
+> **address**, the Close control's **copy**, and what happens on **close-with-pending**.
+> **What is superseded, explicitly: the "slight inset + drop shadow" clause. The dialog is EDGE
+> TO EDGE.** Everything else here stands.
+
 The workspace **covers the screen** (the canvas + chat need the room) but it is a
 **full-screen overlay LAYERED ON TOP of the PM app — not a route change**. The app
-stays mounted, dimmed + inert, behind it; the overlay sits with a slight inset +
-drop shadow so the reader SEES it is a layer on top. **Closing returns you to the
+stays mounted, dimmed + inert, behind it. **Closing returns you to the
 exact screen you launched from** (same route, scroll, filters) with **no reload or
 lost state** — so it is "full-screen" for working AND "on top" for context.
 
-**The shell carries its OWN exit chrome** (it has no app nav to leave through):
+#### The FRAME — the shipped `Modal size="full"`, edge to edge
 
-- **Close** — a `✕ Close` control **top-left** of the workspace (it can name the
-  origin, e.g. "↩ Back to board"), drawn on the shell in every sheet.
-- **`Esc`** — closes from anywhere in the workspace (keyboard).
-- **Close-with-pending guard** — because **confirm-to-persist** means nothing is
-  saved until Confirm, dismissing with proposed (pending) cards opens a guard:
-  **Discard N proposed · Keep planning · Confirm & add** — never a silent loss.
+The dialog is `components/ui/Modal.tsx` (the i18n shim) over
+`packages/design-system/src/components/ui/Modal.tsx`, at `size="full"`, with the panel chrome
+removed exactly as `RunModal.tsx` removes it: `className="flex flex-col rounded-none border-0 p-0"`.
+Inside it is the shipped `PlanningWorkspaceHost` — its frame, its exit-chrome row, its audit-banner
+slot, its canvas box and its footer slot are **COMPOSED, never redrawn**.
 
-**No browser / window chrome** — it is an in-app overlay, not a browser mock; the
-only chrome is the workspace's own top-left controls.
+**MEASURED, on those components rendered headless** (chromium, light, `deviceScaleFactor: 1`,
+`Modal size="full"` wrapping the real `PlanningWorkspaceSkeleton`) — not computed from the
+class strings:
 
-**The canvas title is a drill-down breadcrumb (Yue, 2026-06-24).** The button-
-shaped chip top-left is the project **root** (`PayFlow`); drilling into a node
-grows it to **`PayFlow › Epic 1 › Story 1`** and walks back up — the **canvas's
-own drill-down breadcrumb** (reused from the canvas design, `MOTIR-1009` sheet 6),
-not a "plan" action.
+|                                             | 1440×780                                                   | 1024×648                   |
+| ------------------------------------------- | ---------------------------------------------------------- | -------------------------- |
+| dialog box (radius **0px**, border **0px**) | 1440×780                                                   | 1024×648                   |
+| scrim                                       | full viewport, `--el-overlay-scrim` = `rgba(0, 0, 0, 0.4)` | same                       |
+| `grid-cols-[1fr_22rem]` — canvas · rail     | **1088** · 352                                             | **672** · 352              |
+| the host's own exit-chrome bar              | 49                                                         | 49                         |
+| **canvas pane, EDGE TO EDGE**               | **1088×780**                                               | **672×648**                |
+| canvas pane with a 24px inset + shadow      | 1040×732                                                   | 624×600                    |
+| what the inset costs                        | −48 × −48                                                  | −48 × −48 (−7.4% of width) |
 
-**Onboarding is the one exception** — a genuine full-page first-run _route_ (a
-dedicated journey), not this dismissable overlay.
+**THE DECISION IS EDGE TO EDGE**, for three reasons in the order that decided it:
+
+1. **An inset is a REGRESSION against what ships.** The route host is already `h-dvh w-full` with
+   no shell chrome, so the edge-to-edge overlay hands the canvas the _identical_ box and an inset
+   takes 48px in each axis off it. A migration that makes the surface smaller is not a migration.
+2. **`design/roadmap/`'s fit-floor work (MOTIR-3837) fought for +120px** of canvas height at
+   1440×900 on the surface with the most canvas need. Giving 48 of that back to a margin is that
+   argument running backwards.
+3. **The "it is a layer on top" reading is carried by the SCRIM over a still-visible host page**
+   and by the open animation — not by a 24px margin. `RunModal` made this call in this same
+   primitive for this same reason: _"at full size the dialog IS the surface."_
+
+> **The sheet draws the dialog inset by 22px anyway, and says so on the panel.** The shipped
+> dialog covers the viewport exactly, which would hide the host page the sheet exists to show is
+> still mounted — so every pane offsets it and marks the real edge with a dashed accent box
+> labelled _"the dialog's REAL edge — 0px inset, 0px radius"_. **The inset is a drawing device;
+> the spec is 0.**
+
+**`hideClose` — the dialog's corner ✕ is SUPPRESSED.** Measured at 1440: it renders at
+`(1404, 12)`, 24×24, top-RIGHT, while `PlanningWorkspaceHost` renders its own Close top-LEFT.
+Two Closes in one dialog is a question the reader should never be asked, and the host's is the
+one sheet 6 has always specified. (`RunModal` keeps the corner ✕ because it has no other.)
+
+#### The way OUT — four exits, one path
+
+**The shell carries its OWN exit chrome** (it has no app nav to leave through), and all four
+exits run the same code:
+
+| exit             | what it is                                                 | note                                                                                                                          |
+| ---------------- | ---------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------- |
+| **Close**        | the control **top-LEFT** of the workspace                  | a plain **Close** — see the copy decision below                                                                               |
+| **`Esc`**        | the **DIALOG's** handler (Radix)                           | the host's own `keydown` listener is DELETED                                                                                  |
+| **the scrim**    | a click on the dimmed page outside the dialog              |                                                                                                                               |
+| **browser Back** | a `popstate` that no longer carries the overlay parameters | works because the address was a `shallowPush`, so it left a history entry; closing from it writes **no second** history entry |
+
+One path: `requestClose()` → `withoutPlanningOverlay(currentHref)` → `shallowPush`. **The host page
+underneath is never unmounted**, so its filter, its scroll, its selection and its client islands
+survive the round trip. Focus returns to the element that was active at open (Radix's own
+behaviour, and the reason the doors do not have to manage it).
+
+**THE CLOSE CONTROL'S COPY — a plain `Close`, and the message key is `planningWorkspace.close`.**
+Today's label is `Back to roadmap` / `Back to {item}` / `Back to code health`
+(`messages/en.json` `planningWorkspace.backTo*`) because a ROUTE had to name a destination. **An
+overlay has no destination — it returns you to where you already are**, and naming a page you are
+not going to is worse than saying nothing. So: `Close`, with the `Esc` chip beside it, unchanged
+in placement. **The three `backTo*` keys are DELETED** in both `messages/en.json` and
+`messages/zh.json` by the overlay card, which also adds `planningWorkspace.close`; the launcher
+card retires `planningLaunchBackHref`, which is their only producer.
+
+**THE `Esc` ARBITRATION IS A DECISION, not a default.** `ProjectRoadmapCanvas` ships an opt-in
+`fullScreenable` control (a Fullscreen-API escalation), and it is **OFF inside the overlay** —
+the run modal's decision verbatim, for the same reason: _"escalating to the Fullscreen API from
+inside a dialog that already fills the screen is two overlays and two `ESC` handlers."_ And the
+host's own `Esc` listener — which yielded to a focused text field, to `document.fullscreenElement`
+and to a `defaultPrevented` event — is **removed**: Radix owns the key, and a text field inside a
+dialog still keeps it, because Radix's own handler is the one that yields.
+
+#### The ADDRESS — a NAMESPACED query, settled here because three cards read it
+
+The workspace opens on ANY authed route, so its query rides beside the host page's own. Measured
+collisions at `origin/main` `71896757c`: **`?item=`** on `/roadmap` is the drilled LEVEL
+(MOTIR-3836, `resolveArrivalTrail`); **`?peek=`** is the quick view on `/items`, `/ready`,
+`/boards`; **`?run=`** is the run modal; and today's launcher writes the four generic names
+`mode`, `from`, `item`, `repo` (`lib/planning/launcher.ts` `planningWorkspaceHref`), two of which
+collide outright. So the overlay's parameters are **NAMESPACED**, and they are recorded here once —
+the way `design/runs/design-notes.md` records `/runs?run=<id>` — rather than in whichever of the
+three files is written first.
+
+| parameter      | carries                                                                                                                                                                                                                   | values                                                         | read by                               |
+| -------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------- | ------------------------------------- |
+| **`plan`**     | **the presence switch AND the mode.** Its presence is what opens the overlay — one `has('plan')` test, the way `?run=` and `?peek=` each own one word. Total: an unrecognised value degrades to `project`, never an error | `project` · `generation` · `replan` · `contextual` · `roadmap` | the overlay                           |
+| **`planFrom`** | the ORIGIN kind. It is what decides which of the two below may be READ, so a hand-edited `?planFrom=roadmap&planItem=X` cannot smuggle a target                                                                           | `project` · `work-item` · `roadmap` · `convention-refine`      | the overlay · the rail's opening line |
+| **`planItem`** | the ANCHOR's work-item key. Written **only** when `planFrom=work-item`; the overlay hands it to `GET /api/work-items/planning-anchor` (MOTIR-4727)                                                                        | `MOTIR-<n>`                                                    | the overlay                           |
+| **`planRepo`** | the repository key. Written **only** when `planFrom=convention-refine`                                                                                                                                                    | a repo key                                                     | the overlay                           |
+
+**Why the mode rides on `plan` rather than on a fifth name.** The overlay needs ONE parameter
+whose mere presence means _open_, exactly as `?run=` and `?peek=` do; the mode is already total
+(anything unrecognised falls back to `project`), so it can ride that key without a second
+degradation path. It makes "is the overlay open?" one call and `withoutPlanningOverlay` a strip of
+exactly four names. The camelCase of the other three matches `?parentId=`, the tree's existing
+multi-word query parameter.
+
+**Three files agree on these four names, and none of them should be the one that picks them:**
+the launcher module WRITES and PARSES them, the overlay READS them off `useSearchParams`, and the
+retiring `/planning` forward REWRITES the old `mode` / `from` / `item` / `repo` onto them.
+Renaming one is a change to this section first.
+
+**Close strips exactly these four and leaves every other parameter byte-identical** — that is what
+makes "back to exactly where you were" true of a filtered, scrolled list rather than only of a
+bare route. `withPlanningOverlay('/roadmap?item=MOTIR-12', …)` keeps `item=MOTIR-12`;
+`withoutPlanningOverlay` of the result returns it unchanged, with no dangling `?`.
+
+**Arriving COLD.** An address carrying the overlay query, pasted into a new tab: the **host page
+renders first and the overlay opens over it** — the same order `?run=` produces, and the reason
+the address is worth pasting at all. Nothing is server-rendered for the overlay; it reads the
+query on the client and fetches its own anchor.
+
+**Arriving SIGNED OUT.** The sign-in hop carries the **whole address** — host path AND overlay
+query — in `next=`, so signing in lands on the backlog with the workspace already open over it,
+not on the backlog with the workspace lost. Same rule as every other authed deep link; it is
+stated here because the overlay is the first surface whose STATE is in the query rather than in
+the path.
+
+**LAUNCHED FROM INSIDE THE QUICK VIEW — the dialog-over-dialog case, DECIDED: the workspace opens
+ABOVE the peek and the peek STAYS in the URL.** The per-item Plan / Re-plan pill (MOTIR-910,
+design MOTIR-1489) renders inside the `?peek=` quick view, which is itself a URL-driven modal, so
+`/items?peek=MOTIR-12` gains the overlay's four parameters and keeps its own. Closing the
+workspace therefore returns the reader to the **open peek** they launched from, which is the
+literal reading of "back to exactly where you were" — the peek IS where they were. Dismissing the
+peek first would be a second, silent close the reader did not ask for, and it would make this one
+door behave unlike the other six. **The doors card builds one behaviour, not two.**
+
+#### The CLOSE-WITH-PENDING guard
+
+Because **confirm-to-persist** means nothing is saved until Confirm, dismissing with proposed
+(pending) cards opens a guard: **Discard N proposed · Keep planning · Confirm & add** — never a
+silent loss. It was specified here from the start and never built (`grep -n 'Discard\|Keep planning'
+components/planning lib/hooks` returns nothing at `6cb6d0eef`).
+
+**What it is:** the shipped `Modal` with **`role="alertdialog"`** — the destructive-confirm
+precedent, Subtask 2.8.4 — over the workspace, over the host page. Three shipped `Button`
+variants: **Confirm & add** primary, **Keep planning** secondary, **Discard N proposed** the
+danger action (`bg-(--el-danger) text-(--el-danger-text)`, the one legal use of that ink).
+**The count is IN the copy**, because "discard the proposals" and "discard 5 work items you just
+watched appear" are different sentences.
+
+**The pending predicate is the HOST's own, not a second one:**
+`state.review && !state.decided && !index.isEmpty` — the exact expression
+`PlanningWorkspaceHost` already uses to decide whether `PlanChangeConfirmBar` is showing. **If the
+bar is up, the guard fires; if it is not, closing is instant.** The reader can see the rule, which
+is what makes it feel like a rule rather than a surprise.
+
+**The VECTORS, and what each can do:**
+
+| vector                 |                                                                                                                                                                                                                                                                                                                                          |
+| ---------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Close ✕**            | INTERCEPTED — nothing closes until an action is chosen                                                                                                                                                                                                                                                                                   |
+| **`Esc`**              | INTERCEPTED. The guard's OWN `Esc` then dismisses the **guard**, never the workspace                                                                                                                                                                                                                                                     |
+| **the scrim**          | INTERCEPTED, same as Close                                                                                                                                                                                                                                                                                                               |
+| **browser Back**       | **ALREADY HAPPENED.** A history pop cannot be prevented — by the time the overlay notices, the address no longer carries the query. So the guard opens over a workspace whose address has already changed, and **_Keep planning_ RE-PUSHES the overlay address** with one `shallowPush`; _Discard_ and _Confirm & add_ let the pop stand |
+| **a streaming turn**   | **NOT guarded.** A turn still streaming has produced no proposal to lose — the predicate needs a `review`, and a stream has none yet. Closing calls the conversation's `stop` and the turn is abandoned, which is exactly what navigating away did                                                                                       |
+| **reload / tab close** | **NOT guarded — no `beforeunload`.** A browser's own "leave site?" dialog cannot carry these three actions, so it would be a strictly worse version of this one, and it fires on every reload whether or not there is anything to lose                                                                                                   |
+
+**_Keep planning_ leaves the proposal intact and returns focus to the workspace. _Discard_ calls
+the host's `discard` and then closes. _Confirm & add_ calls `approve`, shows the deciding state,
+closes on success and STAYS OPEN on failure** — a failed approve is the one case where closing
+would lose the thing the reader was trying to save.
+
+#### Every state — not the happy path
+
+| state                    | what it draws                                                                                                                                                                                                       |
+| ------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Opening**              | `PlanningWorkspaceSkeleton` INSIDE the dialog. It is the frame `app/(planning)/loading.tsx` used to be; as an overlay there is no navigation to hold, so the frame is up on the first frame and the canvas fills in |
+| **Empty canvas**         | the canvas's own empty statement, unchanged (`emptyCanvasTitle` / `emptyCanvasDescription`)                                                                                                                         |
+| **No access**            | the host's `NoAccessState` statement, then the overlay **closes** and the page underneath reports — the run modal's `missing` shape                                                                                 |
+| **Never onboarded**      | a real navigation to `ONBOARDING_ENTRY_PATH`, with the overlay query **stripped**. Onboarding is this design's one stated exception — a dedicated first-run journey, not a dismissable overlay                      |
+| **Anchor won't resolve** | the project conversation, at the root, **with no error surface**. A `404` from the anchor read is the no-existence-leak answer for stale, deleted, foreign and forbidden alike (MOTIR-4727)                         |
+| **Audit banner**         | admin: `AuditCoverageBanner` full-bleed in the seam between the top bar and the panes — CITED from MOTIR-2246 / `design/audit-coverage`, never redrawn. Member: nothing, and no reserved gap                        |
+| **Proposal pending**     | the footer SLOT swaps CONTENT, never height — the canvas box must not resize under the zoom / fit / LOCATE clusters anchored to its bottom (MOTIR-1815 panel 3)                                                     |
+| **Streaming**            | the rail's own streaming state, unchanged; the composer's `stop` is what a close calls                                                                                                                              |
+| **Host page behind**     | filter · scroll · selection all preserved, because nothing unmounted. **This is the state the whole story is for, and it is a state of the page UNDER the overlay**                                                 |
+
+#### The ACCESS PATH — the doors are cited, not redrawn
+
+The doors are all designed and shipped: the header pill and the orb (sheet 4 of this asset), the
+callout menu (MOTIR-1811, `ai-callout-menu.mock.html`), the per-item Plan / Re-plan pill
+(MOTIR-1489), ⌘K, the roadmap's empty state, and Code health's _Refine with Motir_ (MOTIR-1663).
+**What changes is what they OPEN.**
+
+> **Every door opens the overlay on the page it sits on; none navigates.**
+
+Sheet 6 draws ONE before/after — the header pill on a filtered backlog, then the overlay over that
+same backlog — and the addresses under each. **A modified click (⌘ / ctrl / middle) is never
+intercepted**, so each door's `href` stays a real, full address that opens the overlay in a new
+tab.
+
+#### The ALLOCATION SWEEP — GIVES / TAKES
+
+Every work item this asset names, and what the asset hands it or takes from it. **A TAKES is an
+amendment owed on that card in this same pass** (`plan-rules/type-design.md`'s sweep-the-referrers
+corollary).
+
+| work item                                                                                                                                                | GIVES / TAKES                   | what                                                                                                                                                                                                                                            |
+| -------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| [MOTIR-4728](motir:cmtpk3ra80099hvn8woe5fkvg) — the launcher writes an overlay address                                                                   | **GIVES · STRUCTURE**           | the four parameter names and their write/read rules, including the origin-gated `planItem` / `planRepo`. Its criteria already say _"emits exactly the parameter names `design-notes.md` records"_, so this section is the thing that test reads |
+| MOTIR-4728                                                                                                                                               | **TAKES · PREMISE**             | nothing. `planningLaunchBackHref` was already scheduled for `@deprecated` there and its retirement is unchanged                                                                                                                                 |
+| [MOTIR-4729](motir:cmtpk3rcp009ahvn8v0fmz7uf) — the overlay host                                                                                         | **GIVES · ELEMENT**             | `hideClose`, the edge-to-edge className, the Close COPY and its key name (`planningWorkspace.close`), the deletion of the three `backTo*` keys, the removal of the host's own `Esc` listener, and `fullScreenable` off with its reason          |
+| MOTIR-4729                                                                                                                                               | **GIVES · STRUCTURE**           | the eight states above, and the ANCHOR degradation (a `404` is the project conversation at the root, no error surface)                                                                                                                          |
+| [MOTIR-4730](motir:cmtpk3rew009bhvn8vflvtftd) — every door opens in place                                                                                | **GIVES · PREMISE**             | the quick-view decision: the workspace opens ABOVE the peek and `peek` is KEPT. Its criterion reads _"keeps or strips `peek` exactly as the design decided, and a test names that decision"_ — the decision is KEEP                             |
+| [MOTIR-4731](motir:cmtpk3rgm009chvn84bn99ahq) — the pending guard                                                                                        | **GIVES · ELEMENT + STRUCTURE** | the alertdialog composition, the three button variants and the count in the copy; the six vectors; the browser-Back re-push; streaming and `beforeunload` both explicitly NOT guarded; the predicate is the host's own expression               |
+| [MOTIR-4732](motir:cmtpk3rix009dhvn8o9fikxzb) — the `(planning)` route group retires                                                                     | **GIVES · STRUCTURE**           | the old→new parameter mapping the forward rewrites                                                                                                                                                                                              |
+| [MOTIR-4727](motir:cmtpk3r810098hvn8pm51j2j1) — the anchor read                                                                                          | **GIVES · PREMISE**             | nothing this asset decided; the read's own 404 contract is cited, not set, here                                                                                                                                                                 |
+| [MOTIR-1193](motir:cmqmsx1rm000004l2rgt8ll9z) — this asset's own `done` card                                                                             | **TAKES · PREMISE**             | the "slight inset + drop shadow" clause is superseded. **The card is `done` and is NOT re-opened** — the asset is amended and the card cited, the disposition MOTIR-3893 recorded when it reworked MOTIR-1795's asset                           |
+| [MOTIR-1729](motir:cms35ia0n000w04i9411n73kf) — the route host                                                                                           | **TAKES · PREMISE**             | the ROUTE itself. Its deliverable is retired by MOTIR-4732; the card is `done` and stays so, and its own header already names this as the gap                                                                                                   |
+| [MOTIR-1299](motir:cmqqeh065000004jmkc1dmtj5) · [MOTIR-1342](motir:cmqsudezn000s04k1rjwulr0l) · [MOTIR-910](motir:cmqgmjqq7000004jo4ap0vwdp) — the doors | **TAKES · nothing**             | their visual design is untouched; only what they open changes, which is MOTIR-4730's work                                                                                                                                                       |
+| [MOTIR-3893](motir:cmteb0te7001mhvn8qbialic7) · [MOTIR-3895](motir:cmteb0tj2001ohvn82ijisqz7) — the run modal                                            | **GIVES to THIS asset**         | the shape, the `?run=` recording precedent, the `fullScreenable`-off decision, and _"at full size the dialog IS the surface"_                                                                                                                   |
+
+**No card's SIZE is changed by this asset** (the estimation half of the sweep,
+`plan-rules/type-design.md`). Every GIVES above lands inside a criterion that card already
+carries — the four cards' own criteria each defer to "as the design records / decided" — so the
+asset ANSWERS questions they were already sized to ask, rather than adding deliverables. The one
+card that gains a named obligation is MOTIR-4729 (the `backTo*` deletion and the `close` key),
+and its criteria already carry it verbatim.
+
+#### The terminology sweep — `grep -oic 'card'`
+
+**72 hits, and every one is accounted for.** 40 are `--el-card` / the `.card` class / `--radius-card`
+— the design system's own surface primitive, which is what the token is called. 10 `modecard` and 6
+`optcard` are this asset's own class names. 3 are `StationCard`, a shipped component quoted by name.
+7 `Discard` + 1 `discards` are the guard's action verb, which is the right English word for what it
+does. **The remaining 4 are in HTML / JS COMMENTS** (the file header, the MOTIR-4318 provenance note,
+and one render comment) and render nowhere.
+
+**7 RENDERED uses of the product noun were corrected in this pass**, five of them pre-existing in
+sheets 1–3: _"proposed cards appear on the canvas"_, _"proposed cards land on the canvas"_, _"each
+card appears as I propose it"_, _"Reply, or refine a card…"_, _"new card proposed after Invoices"_,
+plus two in this amendment's own first draft. **The product noun is _work item_.**
 
 ### Primitives composed (no hand-rolling)
 
