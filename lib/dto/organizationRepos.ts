@@ -33,3 +33,35 @@ export interface OrgRepoOptionDto {
    */
   connectedFromWorkspaceId: string | null;
 }
+
+/**
+ * A project holding a repository, as the `Used by N projects` expansion names it.
+ *
+ * ⚠️ THE LIST IS ACCESS-FILTERED, AND THE COUNT IS ITS LENGTH — never a separate
+ * number. An org member reads this inventory (the row gate is org membership, per
+ * `organization-tier.md` §6), and the organisation contains projects they may not
+ * browse. A count of 4 beside a list of 2 tells them a private project exists and
+ * is exactly the leak the expansion was drawn to avoid.
+ */
+export interface UsingProjectDto {
+  id: string;
+  name: string;
+  /** The project's key ("MOTIR"), so a consumer can link without a second read. */
+  identifier: string;
+  workspaceId: string;
+}
+
+/**
+ * ONE REPOSITORY'S USAGE — the disclosure mechanism (`design/github` panel 6
+ * draws it on the row AT REST) and the same data the org-level disconnect dialog
+ * enumerates. ONE read, both consumers, so the count on the row and the names in
+ * the dialog cannot disagree.
+ */
+export interface OrgRepoUsageDto {
+  /** The internal `GithubRepo.id`. */
+  githubRepoId: string;
+  /** `owner/name` — what a dialog headline says. */
+  repoRef: string;
+  /** The projects the VIEWER may browse that hold this repository. */
+  projects: UsingProjectDto[];
+}

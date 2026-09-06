@@ -161,6 +161,30 @@ const ORG_SWEEP: Record<string, { tables: string[]; source: 'scan' | 'hand'; why
       'adds attachment_org_service_read and workspace_org_service_read, FOR SELECT, each ' +
       'guarded on app.user_id being empty so it fires only for the userless service path.',
   },
+  'lib/services/organizationRepoService.ts#listRepositoryUsage': {
+    tables: ['github_repo', 'project_repository'],
+    source: 'scan',
+    why:
+      'THE FIFTEENTH (MOTIR-4679) — `Used by N projects`, which asks WHICH PROJECTS across the ' +
+      'organisation hold each repository. Both tables answer only under an org arm: ' +
+      'github_repo_org_read (MOTIR-4677) and project_repository_org_read (this card, ' +
+      "20260906000000). Without the second, `project_repository`'s sole policy is " +
+      '`FOR ALL USING (workspace_id = app.workspace_id)` with no system arm — so the read ' +
+      'returned ZERO rows and every inventory row would have said "Used by no project yet", ' +
+      'which is the MOTIR-2956 shape one table over. The PROJECT rows are read separately, ' +
+      'under the system arm `project_workspace_or_system_read` already carries.',
+  },
+  'lib/services/organizationRepoService.ts#disconnectFromOrganisation': {
+    tables: ['github_repo', 'project_repository'],
+    source: 'scan',
+    why:
+      'TWO binds in one method — the repo lookup and the affected-links enumeration — one ' +
+      'adjudication, and the same two arms as the read above. ⚠️ Only the READS are org-bound: ' +
+      'the org arms are `FOR SELECT` only (permissive policies OR-combine, so widening the ' +
+      'write arm would hand a sibling workspace a DELETE it never had), so the clear is one ' +
+      "WORKSPACE-bound write per affected workspace. That split is the method's shape, not an " +
+      'oversight.',
+  },
   'lib/services/organizationRepoService.ts#inProjectOrg': {
     tables: ['github_repo'],
     source: 'hand',

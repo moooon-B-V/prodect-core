@@ -371,6 +371,36 @@ export const projectRepoRepository = {
     return tx.projectRepo.findMany({ where: { githubRepoId }, orderBy: { position: 'asc' } });
   },
 
+  /** CLEAR every project's link to one repository — the org-level disconnect's
+   *  write (Story MOTIR-4669 · MOTIR-4679). Returns how many rows it touched.
+   *
+   *  ⚠️ It NULLS the link; it does not delete the rows, and that is
+   *  `ProjectRepo.githubRepo`'s own `onDelete: SetNull` decision rather than this
+   *  method's — a project's PLAN for a repository outlives its connection to one,
+   *  and deleting the rows would delete the plans as a side effect of an
+   *  integration change. `state` is left alone deliberately: the row records that
+   *  the repository WAS connected, and rewriting that history is a different act
+   *  from disconnecting.
+   *
+   *  ⚠️ WORKSPACE-SCOPED, and the caller LOOPS. `project_repository` carries one
+   *  policy — `FOR ALL USING (workspace_id = app.workspace_id)` — with no system
+   *  arm, and this card's new `project_repository_org_read` is `FOR SELECT` only
+   *  (permissive policies OR-combine for reads; widening the write arm would hand
+   *  a sibling workspace a DELETE it never had). So an org-level clear is one
+   *  bound write PER affected workspace, not one sweeping statement. The
+   *  authorisation happened once, at the org-admin gate; this is the execution. */
+  async clearGithubRepoLinks(
+    githubRepoId: string,
+    workspaceId: string,
+    tx: Prisma.TransactionClient,
+  ): Promise<number> {
+    const result = await tx.projectRepo.updateMany({
+      where: { githubRepoId, workspaceId },
+      data: { githubRepoId: null },
+    });
+    return result.count;
+  },
+
   /** The set's LAST position key (the append anchor), or null on an empty set. */
   async findLastPosition(
     projectId: string,

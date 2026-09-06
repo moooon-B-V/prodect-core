@@ -1,4 +1,4 @@
-import { Prisma, type ProjectRepoRole } from '@/generated/prisma/client';
+import { Prisma, type Project, type ProjectRepoRole } from '@/generated/prisma/client';
 import type { ServiceContext } from '@/lib/workItems/serviceContext';
 import { withWorkspaceContext } from '@/lib/workspaces/context';
 import { bindOrganizationContext } from '@/lib/organizations/context';
@@ -7,14 +7,18 @@ import { keyForAppend } from '@/lib/workItems/positioning';
 import { githubRepoRepository } from '@/lib/repositories/githubRepoRepository';
 import { projectRepoRepository } from '@/lib/repositories/projectRepoRepository';
 import { projectAccessService } from '@/lib/services/projectAccessService';
-import { assertOrgAdmin } from '@/lib/services/organizationAccessService';
+import { assertOrgAdmin, assertOrgMember } from '@/lib/services/organizationAccessService';
 import { githubInstallationService } from '@/lib/services/githubInstallationService';
+import { codeGraphOffboardingService } from '@/lib/services/codeGraphOffboardingService';
+import { projectRepository } from '@/lib/repositories/projectRepository';
+import { withSystemContext } from '@/lib/workspaces/context';
 import { toProjectRepoDto } from '@/lib/mappers/projectRepoMappers';
-import { toOrgRepoOptionDto } from '@/lib/mappers/organizationRepoMappers';
-import type { OrgRepoOptionDto } from '@/lib/dto/organizationRepos';
+import { toOrgRepoOptionDto, toUsingProjectDto } from '@/lib/mappers/organizationRepoMappers';
+import type { OrgRepoOptionDto, OrgRepoUsageDto } from '@/lib/dto/organizationRepos';
 import type { ProjectRepoDto } from '@/lib/dto/projectRepos';
 import { defaultSeedSourceForRole } from '@/lib/projectRepos/vocabulary';
 import {
+  GithubRemovalHappensOnGithubError,
   ProjectRepoInvalidFieldError,
   ProjectRepoNameTakenError,
   RealizedRepoAlreadyClaimedError,
@@ -119,6 +123,204 @@ function translateLinkViolation(
 }
 
 export const organizationRepoService = {
+  /**
+   * `Used by N projects` — WHO holds each of the organisation's repositories.
+   *
+   * ONE read, TWO consumers: the count drawn on every inventory row AT REST
+   * (`design/github` panel 6) and the names the org-level disconnect dialog
+   * enumerates. That is deliberate — the whole disclosure argument is that the
+   * number was on screen before the decision, so a dialog computing its own list
+   * could disagree with the row a person had been looking at all week.
+   *
+   * ⚠️ ACCESS-FILTERED, PER WORKSPACE, AND THE COUNT IS THE LIST'S LENGTH. The
+   * row is org-membership-gated (`organization-tier.md` §6), and an organisation
+   * contains projects a given member may not browse. The filter runs once per
+   * workspace because that is where the actor's role lives — a workspace they are
+   * not in returns nothing, by `filterBrowsable`'s null-role rail. A separate
+   * count would announce the existence of a project the viewer cannot name.
+   */
+  async listRepositoryUsage(ctx: ServiceContext): Promise<OrgRepoUsageDto[]> {
+    // The organisation is resolved from the actor's WORKSPACE row — trusted, not
+    // request input — and membership is what admits the read at all.
+    // ONE org-bound transaction for BOTH org-spanning reads. `github_repo` and
+    // `project_repository` each carry a `*_org_read` FOR SELECT arm (MOTIR-4677
+    // and this card's own migration); neither answers from a bare workspace
+    // context, and both would return a SUBSET rather than raise — the MOTIR-2956
+    // failure shape, which is why they are bound together rather than one at a
+    // time.
+    const { repos, linksByRepo, projectIds } = await withWorkspaceContext(
+      { userId: ctx.userId, workspaceId: ctx.workspaceId },
+      async (tx) => {
+        const orgId = await resolveOrganizationId(ctx.workspaceId, tx);
+        await assertOrgMember(ctx.userId, orgId, tx);
+        await bindOrganizationContext(tx, orgId);
+        const found = await githubRepoRepository.listByOrganization(orgId, tx);
+        const byRepo = new Map<string, string[]>();
+        const ids = new Set<string>();
+        for (const repo of found) {
+          const links = await projectRepoRepository.listByGithubRepoId(repo.id, tx);
+          byRepo.set(
+            repo.id,
+            links.map((l) => l.projectId),
+          );
+          for (const l of links) ids.add(l.projectId);
+        }
+        return { repos: found, linksByRepo: byRepo, projectIds: [...ids] };
+      },
+    );
+    if (repos.length === 0) return [];
+
+    // The PROJECT rows are read under the system arm `project_workspace_or_system_read`
+    // already carries — the ids are resolved above and this only turns them into
+    // names, which the access filter below then narrows. No new arm is owed, and
+    // no arm is widened: this is the same read `codeGraphOffboardingService`
+    // performs on the same table for the same reason.
+    const projectsById = await withSystemContext(async (tx) => {
+      const projects = await projectRepository.findManyByIds(projectIds, tx);
+      return new Map(projects.map((p) => [p.id, p]));
+    });
+
+    // One filter pass per WORKSPACE — the actor's role is workspace-scoped, so a
+    // single call with one ctx would judge every project by their role in one
+    // workspace and admit projects in workspaces they have never joined.
+    const byWorkspace = new Map<string, Project[]>();
+    for (const project of projectsById.values()) {
+      const list = byWorkspace.get(project.workspaceId) ?? [];
+      list.push(project);
+      byWorkspace.set(project.workspaceId, list);
+    }
+    const browsable = new Set<string>();
+    for (const [workspaceId, projects] of byWorkspace) {
+      const allowed = await projectAccessService.filterBrowsable(projects, {
+        userId: ctx.userId,
+        workspaceId,
+      });
+      for (const p of allowed) browsable.add(p.id);
+    }
+
+    return repos.map((repo) => ({
+      githubRepoId: repo.id,
+      repoRef: `${repo.owner}/${repo.name}`,
+      projects: (linksByRepo.get(repo.id) ?? [])
+        .filter((id) => browsable.has(id))
+        .map((id) => projectsById.get(id))
+        .filter((p): p is NonNullable<typeof p> => !!p)
+        .map(toUsingProjectDto),
+    }));
+  },
+
+  /**
+   * DISCONNECT FROM THE ORGANISATION — the destructive one, and the one that
+   * shares a word with the harmless row action.
+   *
+   * It clears the repository's link on EVERY project of the organisation — across
+   * workspaces, which is what makes it the org-level act — and enqueues the
+   * windowed offboarding (`repo_disconnected`), one enqueue per affected
+   * workspace because the queue is workspace-scoped.
+   *
+   * ⚠️ THE LINKS ARE CLEARED, THE ROWS ARE NOT DELETED, and this is the SCHEMA's
+   * decision rather than this card's: `ProjectRepo.githubRepo` is `onDelete:
+   * SetNull` and says why on itself — *"disconnecting this repo leaves each row
+   * standing"*, because a project's PLAN for a repository outlives the connection
+   * to one. This card's description says "removes every `ProjectRepo` row"; its
+   * acceptance criterion says "removes every LINK", and the link is what a
+   * disconnect removes. Deleting the rows would delete the projects' plans as a
+   * side effect of an integration change.
+   *
+   * ⚠️ GITHUB IS REFUSED HERE, ON PURPOSE. See
+   * {@link GithubRemovalHappensOnGithubError} — the disclosure plus the link-out
+   * is the GitHub arm, and the removal arrives through the webhook.
+   */
+  async disconnectFromOrganisation(
+    githubRepoId: string,
+    ctx: ServiceContext,
+  ): Promise<{ clearedLinks: number; enqueued: number }> {
+    const { repo, organizationId } = await withWorkspaceContext(
+      { userId: ctx.userId, workspaceId: ctx.workspaceId },
+      async (tx) => {
+        const orgId = await resolveOrganizationId(ctx.workspaceId, tx);
+        await assertOrgAdmin(ctx.userId, orgId, tx);
+        await bindOrganizationContext(tx, orgId);
+        const found = await githubRepoRepository.findById(githubRepoId, tx);
+        return { repo: found, organizationId: orgId };
+      },
+    );
+    if (!repo || repo.organizationId !== organizationId) {
+      throw new ProjectRepoInvalidFieldError(
+        'githubRepoId',
+        'it does not name a repository connected to this organisation.',
+      );
+    }
+    const repoRef = `${repo.owner}/${repo.name}`;
+    if (repo.provider === 'github') throw new GithubRemovalHappensOnGithubError(repoRef);
+
+    // ENUMERATE BEFORE THE CASCADE — the ordering trap MOTIR-2166 names. The
+    // `project_repository` rows are what say which projects had this repository;
+    // once the mirror row is gone and the links are null, nothing is left to
+    // enumerate and the graphs become unreachable orphans.
+    // The LINKS under the org arm this card adds; the PROJECTS under the system
+    // arm `project` already carries. Two contexts, because the two tables answer
+    // to different policies and neither answers to both — reading the projects
+    // inside the org-bound transaction returns only the caller's own workspace,
+    // which is how this first ran and why `clearedLinks` came back 1 instead of 2.
+    const projectIds = await withWorkspaceContext(
+      { userId: ctx.userId, workspaceId: ctx.workspaceId },
+      async (tx) => {
+        await bindOrganizationContext(tx, organizationId);
+        const links = await projectRepoRepository.listByGithubRepoId(repo.id, tx);
+        return links.map((l) => l.projectId);
+      },
+    );
+    const affected = await withSystemContext(async (tx) => {
+      const projects = await projectRepository.findManyByIds(projectIds, tx);
+      const byWorkspace = new Map<string, string[]>();
+      for (const project of projects) {
+        const list = byWorkspace.get(project.workspaceId) ?? [];
+        list.push(project.id);
+        byWorkspace.set(project.workspaceId, list);
+      }
+      return { byWorkspace };
+    });
+
+    // ⚠️ THE CLEAR IS ONE BOUND WRITE PER AFFECTED WORKSPACE, not one sweeping
+    // statement, and that is the RLS talking rather than a style choice. The org
+    // arms this card and MOTIR-4677 add are `FOR SELECT` only — permissive
+    // policies OR-combine, so widening the write arm would have handed a sibling
+    // workspace a DELETE it never had. `project_repository`'s sole write policy is
+    // `workspace_id = app.workspace_id` with no system arm, so the only context
+    // that can clear a link is that link's own workspace. The authorisation
+    // happened once, at the org-admin gate above; this is the execution, walked.
+    let cleared = 0;
+    for (const workspaceId of affected.byWorkspace.keys()) {
+      cleared += await withWorkspaceContext({ userId: ctx.userId, workspaceId }, (tx) =>
+        projectRepoRepository.clearGithubRepoLinks(repo.id, workspaceId, tx),
+      );
+    }
+    // The MIRROR row is the organisation's, and it is deleted from the workspace
+    // that connected it — `github_repo`'s write policy is workspace-keyed too.
+    await withWorkspaceContext(
+      { userId: ctx.userId, workspaceId: repo.workspaceId ?? ctx.workspaceId },
+      (tx) =>
+        githubRepoRepository.deleteByInstallationAndRepoId(repo.installationId, repo.repoId, tx),
+    );
+
+    // POST-COMMIT, BEST-EFFORT, per the four triggers' own convention: the user's
+    // disconnect has already committed, so a failed queue write must not report a
+    // false failure for an action the database kept. Windowed —
+    // `repo_disconnected` is not immediate, and re-adding inside the window
+    // cancels it, which is what makes the retention promise a grace period.
+    let enqueued = 0;
+    for (const [workspaceId, projectIds] of affected.byWorkspace) {
+      enqueued += await codeGraphOffboardingService.enqueueQuietly({
+        coreWorkspaceId: workspaceId,
+        coreProjectIds: projectIds,
+        repoRefs: [repoRef],
+        reason: 'repo_disconnected',
+      });
+    }
+    return { clearedLinks: cleared, enqueued };
+  },
+
   /**
    * THE PICKER'S FIRST SEGMENT — the organisation's connected repositories,
    * MINUS the ones this project already holds.
