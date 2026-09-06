@@ -72,6 +72,38 @@ export const githubRepoRepository = {
     });
   },
 
+  /** One repo by its INTERNAL id — the lookup a link write does after a picker
+   *  hands back an id it read from `listByOrganization` (MOTIR-4678). Returns
+   *  null when the id names nothing the current RLS context admits, which is the
+   *  same answer a foreign organisation's id gives: the caller must not be able
+   *  to tell a real id in another org from a fictional one. */
+  async findById(id: string, tx: Prisma.TransactionClient): Promise<GithubRepo | null> {
+    return tx.githubRepo.findUnique({ where: { id } });
+  },
+
+  /** THE ORGANISATION'S whole repository inventory (Story MOTIR-4669 · MOTIR-4678)
+   *  — every repo connected to `organizationId`, ACROSS every workspace of that
+   *  org. This is the read the `Add repository` picker's first segment is built
+   *  from, and the reason it is keyed on the organisation rather than the
+   *  workspace is the story's whole claim: a repository is connected once, to the
+   *  org, and which projects use it is visibility configuration.
+   *
+   *  ⚠️ IT MUST RUN UNDER A TRANSACTION THAT HAS BOUND `app.organization_id`.
+   *  `github_repo`'s shipped `FOR ALL` policy is workspace-keyed, so a plain
+   *  `withWorkspaceContext` sees only the caller's own workspace and this read
+   *  silently returns a SUBSET — which would look like a short picker rather
+   *  than a bug. MOTIR-4677 added `github_repo_org_read` (`FOR SELECT`) for
+   *  exactly this, and `bindOrganizationContext` is what turns it on. */
+  async listByOrganization(
+    organizationId: string,
+    tx: Prisma.TransactionClient,
+  ): Promise<GithubRepo[]> {
+    return tx.githubRepo.findMany({
+      where: { organizationId },
+      orderBy: [{ owner: 'asc' }, { name: 'asc' }],
+    });
+  },
+
   /** Every connected repo WITH its parent installation, optionally narrowed to one
    *  workspace (MOTIR-1961) — the operator first-index sweep's one read. The
    *  installation is included because the enqueue payload needs the PROVIDER's

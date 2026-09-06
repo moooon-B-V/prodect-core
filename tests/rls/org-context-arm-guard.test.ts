@@ -161,6 +161,29 @@ const ORG_SWEEP: Record<string, { tables: string[]; source: 'scan' | 'hand'; why
       'adds attachment_org_service_read and workspace_org_service_read, FOR SELECT, each ' +
       'guarded on app.user_id being empty so it fires only for the userless service path.',
   },
+  'lib/services/organizationRepoService.ts#inProjectOrg': {
+    tables: ['github_repo'],
+    source: 'hand',
+    why:
+      'THE FOURTEENTH (MOTIR-4678), and the walk reports NOTHING for it — the bind sits in a ' +
+      'helper whose body then invokes a CALLBACK PARAMETER, so the scan sees only the ' +
+      '`resolveOrganizationId -> workspaceRepository.findByIdInTx` that runs BEFORE the bind ' +
+      'and steps over every statement that runs after it. Declaring `[]` would have recorded ' +
+      'the blind spot as a verdict, so this is read by hand.\n\n' +
+      'What the bound transaction touches: `github_repo` (listByOrganization — the org-spanning ' +
+      'inventory this whole card exists for; findById / findByRepoIdAndProvider on the write ' +
+      'paths), `project_repository` (listByProject, the name + claim guards, findLastPosition, ' +
+      'create) and `organization_membership` (assertOrgAdmin).\n\n' +
+      'ONLY `github_repo` is declared, and the reason is that `bindOrganizationContext` ADDS a ' +
+      'GUC rather than replacing one: this site binds it INSIDE a `withWorkspaceContext` ' +
+      'transaction, so app.user_id / app.workspace_id / app.project_id are all still set. ' +
+      '`project_repository` is workspace-keyed and answers under its own arm; ' +
+      '`organization_membership` answers under org_membership_visible_active_or_own, whose ' +
+      'app.user_id half is bound. `github_repo` is the one read that genuinely spans the ' +
+      "organisation's OTHER workspaces, and MOTIR-4677's github_repo_org_read (FOR SELECT) is " +
+      'the arm that admits it — without which the picker returns a SUBSET and looks like a ' +
+      'short list rather than a bug.',
+  },
   'lib/services/workspacesService.ts#addMember': {
     tables: ['organization_membership'],
     source: 'hand',

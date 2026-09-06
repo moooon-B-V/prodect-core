@@ -1,0 +1,290 @@
+import { Prisma, type ProjectRepoRole } from '@/generated/prisma/client';
+import type { ServiceContext } from '@/lib/workItems/serviceContext';
+import { withWorkspaceContext } from '@/lib/workspaces/context';
+import { bindOrganizationContext } from '@/lib/organizations/context';
+import { resolveOrganizationId } from '@/lib/github/resolveOrganizationId';
+import { keyForAppend } from '@/lib/workItems/positioning';
+import { githubRepoRepository } from '@/lib/repositories/githubRepoRepository';
+import { projectRepoRepository } from '@/lib/repositories/projectRepoRepository';
+import { projectAccessService } from '@/lib/services/projectAccessService';
+import { assertOrgAdmin } from '@/lib/services/organizationAccessService';
+import { githubInstallationService } from '@/lib/services/githubInstallationService';
+import { toProjectRepoDto } from '@/lib/mappers/projectRepoMappers';
+import { toOrgRepoOptionDto } from '@/lib/mappers/organizationRepoMappers';
+import type { OrgRepoOptionDto } from '@/lib/dto/organizationRepos';
+import type { ProjectRepoDto } from '@/lib/dto/projectRepos';
+import { defaultSeedSourceForRole } from '@/lib/projectRepos/vocabulary';
+import {
+  ProjectRepoInvalidFieldError,
+  ProjectRepoNameTakenError,
+  RealizedRepoAlreadyClaimedError,
+} from '@/lib/projectRepos/errors';
+
+// ADD AND LINK — the ONE action this story is about (Story MOTIR-4669 ·
+// MOTIR-4678). No UI here; that is MOTIR-4680 and MOTIR-4681.
+//
+// `Add repository` is one act with TWO inputs, and this service is what makes
+// that true rather than the UI pretending it:
+//
+//   PICK    an organisation-connected repository → create the `ProjectRepo` link.
+//           NOTHING ELSE HAPPENS. No installation call, no index enqueue, no
+//           graph work. The row is usable immediately and reads
+//           `already indexed · shared`.
+//   CONNECT a new one → perform the organisation connection AND the project link.
+//           The ONLY path that costs an index.
+//
+// ⚠️ THE ABSENCE ON THE PICK PATH IS THE FEATURE. "Nothing re-indexes" is not
+// visible on a screen — it is the non-occurrence of a job — so it is asserted
+// where the enqueue would have been, on a double's call count being zero. A
+// reasonable implementer WILL be tempted to enqueue "for safety" here; that
+// would silently reintroduce the per-project index cost this whole story exists
+// to remove.
+//
+// 4-layer per CLAUDE.md: this service owns the transactions and the gates; every
+// row read/write goes through a repository; the routes are transport.
+
+/** What the caller supplies to link a repository the organisation already has. */
+export interface LinkExistingRepoInput {
+  /** The internal `GithubRepo.id`, as `listAvailableForProject` returned it. */
+  githubRepoId: string;
+  role: ProjectRepoRole;
+  /** The row's name inside the project. Defaults to the repository's own name. */
+  name?: string;
+  label?: string;
+}
+
+/** What the caller supplies to connect a NEW repository and link it in one act. */
+export interface ConnectAndLinkInput {
+  /** The PROVIDER's installation id, from the App's post-install redirect. */
+  installationId: string;
+  /** The provider's repo id (`GithubRepo.repoId`) selected during that install. */
+  providerRepoId: string;
+  role: ProjectRepoRole;
+  name?: string;
+  label?: string;
+}
+
+/**
+ * ⚠️ THE ORG GUC IS BOUND INSIDE THE PROJECT'S OWN TRANSACTION, and both halves
+ * are load-bearing.
+ *
+ * The project gate (`repository:manage` / browse) is what proves the actor may
+ * touch THIS project, and it is workspace-scoped. The organisation read is what
+ * makes the picker span the org's OTHER workspaces, and `github_repo`'s shipped
+ * `FOR ALL` policy is workspace-keyed — so without `bindOrganizationContext` the
+ * inventory read returns a SUBSET and looks like a short list rather than a bug.
+ * MOTIR-4677's `github_repo_org_read` (`FOR SELECT`) is what admits the rest, and
+ * this is the call that turns it on.
+ *
+ * The organisation id comes from the WORKSPACE ROW's own `organizationId` — a
+ * trusted resolution, never request input, which is the constraint
+ * `bindOrganizationContext` documents for itself.
+ */
+async function inProjectOrg<T>(
+  projectId: string,
+  ctx: ServiceContext,
+  mode: 'browse' | 'edit',
+  fn: (tx: Prisma.TransactionClient, organizationId: string) => Promise<T>,
+): Promise<T> {
+  if (mode === 'edit') {
+    await projectAccessService.assertPermission(projectId, ctx, 'repository:manage');
+  } else {
+    await projectAccessService.assertCanBrowse(projectId, ctx);
+  }
+  return withWorkspaceContext(
+    { userId: ctx.userId, workspaceId: ctx.workspaceId, projectId },
+    async (tx) => {
+      const organizationId = await resolveOrganizationId(ctx.workspaceId, tx);
+      await bindOrganizationContext(tx, organizationId);
+      return fn(tx, organizationId);
+    },
+  );
+}
+
+/** Translate the `(project_id, github_repo_id)` race into its typed error, so a
+ *  raw P2002 never escapes (the concurrency-to-typed-error rule). */
+function translateLinkViolation(
+  err: unknown,
+  fallback: { name: string; githubRepoId: string; projectId: string },
+): never {
+  if (err instanceof Prisma.PrismaClientKnownRequestError && err.code === 'P2002') {
+    const target = err.meta?.['target'];
+    const fields = Array.isArray(target) ? target.map(String) : [String(target ?? '')];
+    if (fields.some((f) => f.includes('github_repo_id'))) {
+      throw new RealizedRepoAlreadyClaimedError(fallback.githubRepoId);
+    }
+    throw new ProjectRepoNameTakenError(fallback.name, fallback.projectId);
+  }
+  throw err;
+}
+
+export const organizationRepoService = {
+  /**
+   * THE PICKER'S FIRST SEGMENT — the organisation's connected repositories,
+   * MINUS the ones this project already holds.
+   *
+   * Gated on project BROWSE and org membership rather than org admin, and that is
+   * deliberate: §6 of `docs/decisions/organization-tier.md` forbids a relocation
+   * that narrows an audience, and the surface this inventory relocates from
+   * (`/settings/workspace/github`) reads with no role check at all. The ADD is
+   * org-admin; SEEING what the organisation has is not.
+   *
+   * The subtraction is done here rather than in SQL because both sides are small
+   * and the join would have to cross an RLS boundary the two reads already cross
+   * correctly on their own.
+   */
+  async listAvailableForProject(
+    projectId: string,
+    ctx: ServiceContext,
+  ): Promise<OrgRepoOptionDto[]> {
+    return inProjectOrg(projectId, ctx, 'browse', async (tx, organizationId) => {
+      const [orgRepos, held] = await Promise.all([
+        githubRepoRepository.listByOrganization(organizationId, tx),
+        projectRepoRepository.listByProject(projectId, ctx.workspaceId, tx),
+      ]);
+      const taken = new Set(held.map((row) => row.githubRepoId).filter((id): id is string => !!id));
+      return orgRepos.filter((repo) => !taken.has(repo.id)).map(toOrgRepoOptionDto);
+    });
+  },
+
+  /**
+   * PICK — link a repository the organisation already has into this project.
+   *
+   * ⚠️ NOTHING IS ENQUEUED. Not conditionally, not "if the graph looks stale".
+   * The repository is connected and indexed at the organisation; a second project
+   * using it is one row.
+   *
+   * The row is created `connected` with its `githubRepoId` set in ONE write
+   * rather than created `proposed` and then attached, because there is no
+   * intermediate state to observe: the repository exists before the row does.
+   */
+  async linkExistingRepo(
+    projectId: string,
+    input: LinkExistingRepoInput,
+    ctx: ServiceContext,
+  ): Promise<ProjectRepoDto> {
+    return inProjectOrg(projectId, ctx, 'edit', async (tx, organizationId) => {
+      // The org-admin gate, in the SERVICE and inside the transaction. The room's
+      // own `repository:manage` is a PROJECT permission — without this a project
+      // admin who is not an org admin could attach the organisation's
+      // repositories through it. A gate on the button is a gate one caller away
+      // from being missing.
+      await assertOrgAdmin(ctx.userId, organizationId, tx);
+
+      const repo = await githubRepoRepository.findById(input.githubRepoId, tx);
+      // Not-found and belongs-to-another-org are ONE answer on purpose: a probe
+      // must not be able to tell a real id in a foreign org from a fictional one.
+      if (!repo || repo.organizationId !== organizationId) {
+        throw new ProjectRepoInvalidFieldError(
+          'githubRepoId',
+          'it does not name a repository connected to this organisation.',
+        );
+      }
+
+      const name = (input.name ?? repo.name).trim();
+      const clash = await projectRepoRepository.findByProjectAndNameInsensitive(
+        projectId,
+        name,
+        ctx.workspaceId,
+        tx,
+      );
+      if (clash) throw new ProjectRepoNameTakenError(name, projectId);
+
+      const existing = await projectRepoRepository.findByProjectAndGithubRepoId(
+        projectId,
+        repo.id,
+        tx,
+      );
+      // The double-add raises the SAME typed error and the same 409 MOTIR-4648
+      // preserved through `@@unique([projectId, githubRepoId])` — the guarantee
+      // that survived dropping the global unique index.
+      if (existing) throw new RealizedRepoAlreadyClaimedError(repo.id);
+
+      const last = await projectRepoRepository.findLastPosition(projectId, ctx.workspaceId, tx);
+      let row;
+      try {
+        row = await projectRepoRepository.create(
+          {
+            workspaceId: ctx.workspaceId,
+            projectId,
+            role: input.role,
+            name,
+            ...(input.label !== undefined ? { label: input.label } : {}),
+            seedSource: defaultSeedSourceForRole(input.role),
+            state: 'connected',
+            githubRepoId: repo.id,
+            position: keyForAppend(last),
+          },
+          tx,
+        );
+      } catch (err) {
+        translateLinkViolation(err, { name, githubRepoId: repo.id, projectId });
+      }
+      return toProjectRepoDto({ ...row, githubRepo: repo, collaborators: [] });
+    });
+  },
+
+  /**
+   * CONNECT — bind the installation to the ORGANISATION and link one of its
+   * repositories to this project, in one act.
+   *
+   * This is the only path that costs an index, and it does not enqueue one
+   * itself: `bindInstallationForWorkspace` already enqueues the first index for
+   * every repo the install newly selected (MOTIR-1500, re-gated by MOTIR-1961).
+   * Adding a second enqueue here would double-count the one thing this story
+   * measures, so the composition is deliberate and the test asserts EXACTLY one.
+   */
+  async connectAndLink(
+    projectId: string,
+    input: ConnectAndLinkInput,
+    ctx: ServiceContext,
+  ): Promise<ProjectRepoDto> {
+    // The gate runs BEFORE the installation bind, in its own transaction: the
+    // bind talks to the provider and writes rows, and a refusal must happen while
+    // there is still nothing to undo.
+    await inProjectOrg(projectId, ctx, 'edit', async (tx, organizationId) => {
+      await assertOrgAdmin(ctx.userId, organizationId, tx);
+    });
+
+    await githubInstallationService.bindInstallationForWorkspace({
+      workspaceId: ctx.workspaceId,
+      installationId: input.installationId,
+    });
+
+    return inProjectOrg(projectId, ctx, 'edit', async (tx, organizationId) => {
+      const repo = await githubRepoRepository.findByRepoIdAndProvider(
+        input.providerRepoId,
+        'github',
+        tx,
+      );
+      if (!repo || repo.organizationId !== organizationId) {
+        throw new ProjectRepoInvalidFieldError(
+          'providerRepoId',
+          'the install did not select that repository for this organisation.',
+        );
+      }
+      const name = (input.name ?? repo.name).trim();
+      const last = await projectRepoRepository.findLastPosition(projectId, ctx.workspaceId, tx);
+      let row;
+      try {
+        row = await projectRepoRepository.create(
+          {
+            workspaceId: ctx.workspaceId,
+            projectId,
+            role: input.role,
+            name,
+            ...(input.label !== undefined ? { label: input.label } : {}),
+            seedSource: defaultSeedSourceForRole(input.role),
+            state: 'connected',
+            githubRepoId: repo.id,
+            position: keyForAppend(last),
+          },
+          tx,
+        );
+      } catch (err) {
+        translateLinkViolation(err, { name, githubRepoId: repo.id, projectId });
+      }
+      return toProjectRepoDto({ ...row, githubRepo: repo, collaborators: [] });
+    });
+  },
+};
