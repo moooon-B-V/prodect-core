@@ -1271,8 +1271,7 @@
                   <button class="btn ghost" type="button">Not now</button>
                 </div>
                 <p class="promise">
-                  It takes about five minutes, and you'll land back in this window with a plan
-                  waiting.
+                  It takes about five minutes, and you'll land back in this window ready to plan.
                 </p>
               </div>
             </div>
@@ -1425,7 +1424,7 @@
                   <button class="btn ghost" type="button">Not now</button>
                 </div>
                 <p class="promise">
-                  Two questions, then straight back here with a plan across all 214 items.
+                  Two questions, then straight back here and we can get planning.
                 </p>
               </div>
             </div>
@@ -1497,21 +1496,19 @@
                   ><span class="dt" style="background: var(--el-tint-lavender)"></span>Accounts &
                   access</span
                 >
-                <span class="wn prop" style="left: 34%; top: 10%">Sign-in with email</span>
-                <span class="wn prop" style="left: 34%; top: 30%">Team invites</span>
+                <span class="wn" style="left: 34%; top: 10%">Sign-in with email</span>
+                <span class="wn" style="left: 34%; top: 30%">Team invites</span>
                 <span class="wn" style="left: 6%; top: 54%"
                   ><span class="dt" style="background: var(--el-tint-mint)"></span>Widget
                   editor</span
                 >
-                <span class="wn prop" style="left: 34%; top: 48%">Draft autosave</span>
-                <span class="wn prop" style="left: 34%; top: 68%">Version history</span>
-                <span class="wn prop" style="left: 63%; top: 30%">Share a widget</span>
-                <span class="wn prop" style="left: 63%; top: 58%">Embed code</span>
+                <span class="wn" style="left: 34%; top: 48%">Draft autosave</span>
+                <span class="wn" style="left: 63%; top: 30%">Share a widget</span>
               </div>
             </div>
             <div class="wtop" style="border-top: 1px solid var(--el-border); border-bottom: 0">
-              <span class="pill lavender">42 proposed work items</span>
-              <span class="wcrumb">Nothing is added until you say so.</span>
+              <span class="pill neutral">214 work items</span>
+              <span class="wcrumb">acme/widgets · code graph ready</span>
             </div>
           </div>
           <div class="wrail">
@@ -1540,13 +1537,13 @@
               <div class="turn">
                 <span class="avatar ai" aria-hidden="true">✦</span>
                 <span class="bubble ai"
-                  >That's what I was missing. Here's a plan across acme/widgets and all 214 of your
-                  items — 42 work items, in six pieces.</span
+                  >That's what I was missing. I've got your code and your 214 items — what do you
+                  want to plan first?</span
                 >
               </div>
             </div>
             <div class="composer">
-              <span class="inp">Ask for a change…</span>
+              <span class="inp">Tell Motir what to plan…</span>
             </div>
           </div>
         </div>
@@ -1554,12 +1551,30 @@
       <div class="pair" style="margin-top: 14px">
         <p class="muted-note">
           <strong>The return is a FOURTH moment, not a mirror of the hand-off.</strong> The hand-off
-          says <em>we need something first</em>; this says <em>we have it — here is your plan</em>.
-          So it is not another full-card interstitial: the workspace is simply THERE, doing what the
-          user pressed the button for, and the acknowledgement is one line in the conversation.
+          says <em>we need something first</em>; this says
+          <em>we have it — what do you want to plan?</em> So it is not another full-card
+          interstitial: the workspace is simply THERE, ready to do what the user pressed the button
+          for, and the acknowledgement is one line in the conversation.
           <strong>The line sits in the RAIL because the rail is where the session speaks</strong> —
           a toast would fade, and a banner over the canvas would put chrome between the user and the
           thing they came back for.
+        </p>
+        <p class="muted-note">
+          <strong>⚠️ AND THE PLANNER ASKS — it does NOT hand over a plan (Yue, 2026-09-06).</strong>
+          An earlier revision of this panel drew the canvas full of dashed proposals and a footer
+          reading <em>42 proposed work items</em>, with the planner opening on
+          <em>"here's a plan across acme/widgets and all 214 of your items"</em>. That is not what a
+          planning session is.
+          <strong
+            >A regular session arrives with the context and WAITS to be told what to plan</strong
+          >
+          — which is exactly what <span class="code">continue</span> means (MOTIR-4767:
+          <em>the session asks and plans exactly as a regular session does</em>). So the canvas
+          shows the project AS IT STANDS — the items that are already there, no proposals — the
+          footer says what the session can SEE rather than what it has produced, and the composer is
+          live and empty. The same correction removed
+          <span class="code">design/onboarding-migrate/</span>'s Panel 0, which drew the identical
+          mistake at the end of the wizard.
         </p>
         <p class="muted-note">
           <strong>The earlier turns are still above it</strong>, and that is the design claim
@@ -1707,8 +1722,8 @@
             either.</strong
           >
           The reading state (panel 1) resolves straight into an ordinary planning session — the
-          regular framing, the regular questions, the canvas filling with proposals — and the user
-          never learns that a decision was made about them.
+          regular framing, the regular questions, the planner waiting to be told what to plan — and
+          the user never learns that a decision was made about them.
           <strong>That is the success case, and it draws nothing</strong>, which is worth stating
           explicitly here because an asset full of interstitials invites a builder to add a fourth
           one saying <em>Good news, we can plan this!</em> Nobody needs to be told that the thing

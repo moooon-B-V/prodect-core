@@ -2928,14 +2928,14 @@ yet.
 **They are told apart by STRUCTURE, not by a colour** — which is what makes them distinguishable at
 a glance and in a screen reader alike.
 
-|              | A · `onboard_new_project`                     | B · `onboard_existing_project`                              |
-| ------------ | --------------------------------------------- | ----------------------------------------------------------- |
-| heading      | _Let's set your project up first_             | _Two things I still need_ (it COUNTS)                       |
-| found block  | — (there is nothing to have found)            | `.found` — _I read **acme/widgets** and **214 work items**_ |
-| missing list | —                                             | `.missing` — the planner's own words, rendered              |
-| kept steps   | —                                             | `.kept` — one `run` chip, three `satisfied` chips           |
-| actions      | _Set up my project_ · _Not now_               | _Fill in the gaps_ · _Not now_                              |
-| closing line | _you'll land back in this window with a plan_ | _straight back here with a plan across all 214 items_       |
+|              | A · `onboard_new_project`                       | B · `onboard_existing_project`                              |
+| ------------ | ----------------------------------------------- | ----------------------------------------------------------- |
+| heading      | _Let's set your project up first_               | _Two things I still need_ (it COUNTS)                       |
+| found block  | — (there is nothing to have found)              | `.found` — _I read **acme/widgets** and **214 work items**_ |
+| missing list | —                                               | `.missing` — the planner's own words, rendered              |
+| kept steps   | —                                               | `.kept` — one `run` chip, three `satisfied` chips           |
+| actions      | _Set up my project_ · _Not now_                 | _Fill in the gaps_ · _Not now_                              |
+| closing line | _you'll land back in this window ready to plan_ | _straight back here and we can get planning_                |
 
 **Every word of the missing list is the planner's** (MOTIR-4767 returns it); the surface renders it
 and writes none of it. It is drawn as a list of gaps — a dashed open circle per row — and NOT as an
@@ -2953,11 +2953,33 @@ allowed to close it again, and a hand-off with one button is a wall with a door 
 
 ### Panel 5 · THE RETURN — a fourth moment, not a mirror of the third
 
-The hand-off says _we need something first_; the return says _we have it — here is your plan_. So it
-is **not another full-card interstitial**: the workspace is simply there, doing what the user pressed
-the button for, and the acknowledgement is one line in the conversation —
+The hand-off says _we need something first_; the return says _we have it — what do you want to plan?_
+So it is **not another full-card interstitial**: the workspace is simply there, ready to do what the
+user pressed the button for, and the acknowledgement is one line in the conversation —
 
 > ✓ You answered the two questions. Picking up where we left off.
+
+#### ⚠️ THE PLANNER ASKS — it does NOT hand over a plan (Yue, 2026-09-06)
+
+The first revision of this panel drew the canvas full of dashed proposals and a footer reading _42
+proposed work items · nothing is added until you say so_, with the planner opening on _"here's a plan
+across acme/widgets and all 214 of your items — 42 work items, in six pieces"_. **That is not what a
+planning session is.** A regular session **arrives with the context and WAITS to be told what to
+plan**; it asks, it does not propose a tree unprompted. It is also exactly what `continue` means one
+repository over (**MOTIR-4767**: _the session asks and plans exactly as a regular session does_).
+
+So the panel draws: the canvas showing the project **as it stands** — the items that are already
+there, no proposals; a footer saying what the session can **see** (`214 work items` ·
+_acme/widgets · code graph ready_) rather than what it has produced; the planner's turn ending in a
+**question**; and a live, empty composer reading _Tell Motir what to plan…_. The two hand-off panels'
+closing lines were corrected in the same pass for the same reason — they promised _a plan waiting_
+and now promise _ready to plan_.
+
+**The same correction removed `design/onboarding-migrate/`'s Panel 0**, which drew the identical
+mistake at the end of the migrate wizard (finished-step done-cards, a _"here's a plan grounded in your
+code"_ lead, a canvas of proposed subtasks, a confirm bar). Nothing about the end of that wizard is
+migrate-specific: it opens the universal plan window and the regular session begins. See
+`design/onboarding-migrate/design-notes.md` §Panel 0.
 
 **The line sits in the RAIL because the rail is where the session speaks.** A toast would fade; a
 banner over the canvas would put chrome between the user and the thing they came back for.
@@ -2991,7 +3013,8 @@ Three surfaces this must never become, drawn so a builder can recognise the pull
   surface here carries a way onward and says where it leads.
 
 **And the third outcome draws nothing.** `continue` means the reading state resolves straight into an
-ordinary planning session and the user never learns a decision was made about them. That is stated
+ordinary planning session — the regular framing, the regular questions, the planner waiting to be
+told what to plan — and the user never learns a decision was made about them. That is stated
 explicitly in the asset because an asset full of interstitials invites a fourth one saying _Good
 news, we can plan this!_ — and nobody needs to be told that the thing they asked for is happening.
 

@@ -17,10 +17,11 @@ this card), and for the state-machine scaffolding **7.15.2a / MOTIR-1499**.
 > sub-surface's shipped asset and say so — or it gets built twice) and **#31** (the multi-panel /
 > design-reference rule), this doc **cites** each embedded surface's owner and reproduces its language;
 > it does **not** re-design connect / import / the plan screen. The genuinely new pixels here are (a) the
-> **set-up wizard chrome + rail** (Connect · Index required · Import optional), (b) the **index-progress
-> step** (§Panel 2), and (c) **THE LANDING** (§Panel 0) — the **full-screen plan screen (NO left nav)** the
-> user reaches after import, with the finished set-up steps shown as **done-cards** + the reconcile framing
-> (the plan screen itself is the shipped `PlanningWorkspace`, composed). Product truths this revision bakes
+> **set-up wizard chrome + rail** (Connect · Index required · Import optional) and (b) the **index-progress
+> step** (§Panel 2). ~~(c) **THE LANDING** (§Panel 0)~~ — **REMOVED 2026-09-06 (MOTIR-4766, Yue):** what
+> the wizard opens at the end is the **regular planning session**, which arrives with the context and
+> **waits to be told what to plan**. Nothing about it is migrate-specific, so this asset draws none of it;
+> see §Panel 0. Product truths this revision bakes
 > in (Yue, 2026-07): the **required core is just Connect + Index**;
 > **conventions + code-health are derived SILENTLY, auto-used, with NO approval and NOT surfaced in
 > onboarding** — they live on the Code-health page (§The spine, and the removed-Panel-3 §); conventions
@@ -231,23 +232,34 @@ CodeRabbit `code-guidelines`, the ETH-Zurich auto-gen caveat that justifies the 
 
 ## Panels (inspect EVERY panel — the multi-panel rule, mistake #31)
 
-### Panel 0 — THE LANDING: the full-screen universal plan screen (NO left nav) — **composes the EXISTING `PlanningWorkspace` (MOTIR-1193 / 1299)**
+### Panel 0 — REMOVED: the wizard's ending is a REGULAR PLANNING SESSION, and it is not drawn here
 
-**Where the user lands after the (optional) import step.** This is NOT the set-up wizard — it is the
-**existing** universal plan screen, **full-screen with NO left nav**. The migrate-NEW pixels are only the
-**finished-step done-cards** + the **reconcile framing**; the canvas + chat below them are the shipped
-`PlanningWorkspace` (composed, cited — not re-designed). Structure: the **brand bar** (Motir · "acme —
-planning your project" · Save & exit · avatar), then a full-width `.plan-screen` (no rail): a **`.done-cards`
-row** — three `.done-card`s (mint-check tile + name + meta): **Connected · 3 repositories**, **Indexed ·
-5,412 files · 31,208 symbols**, **Imported · 142 work items · Jira** — so the finished set-up steps are
-visible as cards, not a rail. Below, a `.plan-lead` ("**Your codebase is in Motir.** Here's a plan grounded
-in your code — reconciled with the 142 imported items…"), then the `.plan-body` grid **`[canvas | chat]`**:
-the `.canvas` (dot-grid) with a firm Story node + dashed-accent **proposed** `Subtask · add` nodes, **each
-carrying a `.n-repo` repo tag** (`acme/api` / `acme/web` / `acme/shared`) over the **confirm-to-persist**
-bar ("6 proposed · nothing saved yet" · Discard · **"Add 6 items to your backlog"**); and the `.chat`
-(AI/user `.bubble`s + `.composer`) — the AI opens with what it read across the 3 repos + 142 imported items
-and what it **skipped** as already-tracked. This panel answers "you're set up — here's your code-aware
-plan, reconciled with what you imported."
+**Superseded 2026-09-06 (MOTIR-4766), at Yue's direction.** The panel drew a bespoke landing —
+finished-step done-cards, a `.plan-lead` reading _"**Your codebase is in Motir.** Here's a plan grounded
+in your code…"_, a `.canvas` already full of dashed **proposed** subtask nodes, and a confirm bar reading
+_"6 proposed · nothing saved yet"_. That depicts **a planner that had read the repository and handed over a
+plan nobody asked for**, and that is not what a planning session is.
+
+**A REGULAR session arrives with the context and WAITS to be told what to plan.** The code graph, the
+imported backlog and the direction are what it has; the user's ask is what it acts on. It asks; it does not
+propose a tree unprompted. That is the same behaviour `motir-ai`'s routing verdict names for its
+`continue` outcome (**MOTIR-4767**: _the session asks and plans exactly as a regular session does_), and it
+is what a person doing a planning pass by hand actually experiences.
+
+**So there is nothing migrate-specific to draw at the end of this wizard.** Set-up finishes, the universal
+plan window opens, and the session begins the way every session begins — on this project, on any project,
+on any day. The design of record is `design/ai-chat/planning-workspace.mock.html` (MOTIR-1193 / MOTIR-1299)
+and, for a project arriving with never-approved onboarding, `design/ai-chat/reading-and-handoff.mock.html`
+(MOTIR-4766). The panel's slot in the mock is now a NOTE saying this, rather than an absence: a panel
+removed with no reason attached is one the next card re-draws.
+
+**This document's own model said so before the panel contradicted it** — §The spine already reads _"Planning
+is NOT designed here — it is the EXISTING universal plan screen"_. Where earlier sections below still speak
+of _"the landing"_, _"the done-cards"_ or _"§Panel 0"_ as drawn surfaces, they are describing this removed
+panel; the mechanism they describe (set-up finishes → the plan window opens) is unchanged, the **pixels are
+not this asset's**. The `.plan-screen` / `.done-card*` / `.plan-lead` / `.plan-body` / `.canvas` / `.node` /
+`.confirm-bar` / `.chat` / `.bubble` / `.composer` rules went with the markup rather than being left as a
+set a later panel could quietly re-adopt.
 
 ### Panel 1 — Connect repos (step 1) — MULTI-PROVIDER (GitHub + GitLab) — **composes 7.7.1 (`design/github/`) via the `GitProvider` seam**
 
@@ -744,6 +756,15 @@ states. Panel 6 adds **no class, no colour and no shape token**: it is `--el-tin
 `--el-surface` / `--el-surface-soft` / `--el-card` grounds, `--el-text-secondary` for every meta and
 annotation line, and `--radius-card` / `--radius-control` / `--radius-badge` for shape. No raw hex,
 no Tier-0 `--color-*`, no raw `rounded-*` / `p-*` / `h-*` on a surface's own box.
+
+### Also in this pass — Panel 0 was REMOVED (Yue, 2026-09-06)
+
+Not part of the kept-step work, but landed under the same card because the same mistake was in both
+assets: Panel 0 drew a bespoke landing in which the planner had read the repository and handed over a
+plan nobody asked for. **A regular planning session arrives with the context and WAITS to be told what
+to plan.** Nothing about the end of this wizard is migrate-specific, so there is nothing here to draw;
+the panel's slot is now a note saying why, and `design/ai-chat/`'s Panel 5 (the RETURN) was corrected
+in the same pass for the same reason. Full record in §Panel 0 above.
 
 ### The other half of this design lives in `design/ai-chat/`
 
