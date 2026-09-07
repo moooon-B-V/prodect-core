@@ -534,8 +534,9 @@ export function SidebarNav({
                 isActive(pathname, '/settings') &&
                 !isActive(pathname, '/settings/workspace/security') &&
                 !isActive(pathname, '/settings/workspace/jobs') &&
-                !isActive(pathname, '/settings/workspace/github') &&
-                !isActive(pathname, '/settings/workspace/gitlab'),
+                // Git moved to the organisation tier (MOTIR-4680); the clause
+                // follows the row it exists to yield to.
+                !isActive(pathname, '/settings/organization/git'),
             },
           ]
         : []),
@@ -568,19 +569,23 @@ export function SidebarNav({
       },
       {
         // Git integration settings (Story 7.10 GitHub + 7.23 GitLab · MOTIR-1478)
-        // — the SHARED connect-settings surface: connect the workspace to GitHub
-        // or GitLab (a provider Segmented swaps the variant) and see the connected
-        // repos/projects. ONE "Git" row (git-branch glyph) — GitLab does NOT get a
-        // second row; the row lands on the GitHub variant by default, and is
-        // active on both provider routes. A workspace-scoped settings sub-page
-        // reached the same way Job runs is (a bottom-nav deep link — there is no
-        // separate workspace-settings rail).
+        // — the SHARED connect-settings surface. ONE "Git" row (git-branch
+        // glyph): GitLab does NOT get a second row, because the provider is a
+        // Segmented on the page rather than a second destination.
+        //
+        // ⚠️ IT POINTS AT THE ORGANISATION NOW (Story MOTIR-4669 · MOTIR-4680).
+        // A repository is connected ONCE, to the organisation, so the surface
+        // moved a tier and `/settings/workspace/{github,gitlab}` are deleted.
+        // The ROW stays and is RE-POINTED rather than removed:
+        // `organization-tier.md` §6 — a relocation preserves the door, and this
+        // is the deep link from anywhere in the app, reached the same way Job
+        // runs is. Leaving it on the old path would still have worked, through
+        // the permanent redirect, and would have made every visit pay a hop for
+        // a link the app itself controls.
         icon: <GitBranch />,
         label: t('nav.git'),
-        href: '/settings/workspace/github',
-        active:
-          isActive(pathname, '/settings/workspace/github') ||
-          isActive(pathname, '/settings/workspace/gitlab'),
+        href: '/settings/organization/git',
+        active: isActive(pathname, '/settings/organization/git'),
       },
       // Docs and Legal documents LEFT this section for the Help menu
       // (MOTIR-4239 · design/shell/help-menu.mock.html): the authed shell now

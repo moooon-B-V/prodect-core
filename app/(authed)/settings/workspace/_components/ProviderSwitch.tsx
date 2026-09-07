@@ -10,8 +10,8 @@ import { GitlabMark } from '@/components/icons/GitlabMark';
 // MOTIR-1478, design/gitlab Panel 1 + 6). The two providers — GitHub (7.10) and
 // GitLab (7.23) — render through ONE shared shell; this Segmented [GitHub | GitLab]
 // is the in-page door that swaps which provider's connect panel shows. Selecting a
-// provider navigates to that provider's thin route (`/settings/workspace/github`
-// | `/settings/workspace/gitlab`), both of which render the same shell with the
+// provider navigates to that provider's surface (`/settings/organization/git`
+// | `?provider=gitlab`), both of which render the same shell with the
 // other segment pressed — so the chrome is provably shared and only the connect
 // content varies (the card's "provider is a variant, not a separate look").
 //
@@ -42,14 +42,25 @@ type Provider = 'github' | 'gitlab';
  * `router.push` rather than `shallowPush`, per `CLAUDE.md`'s rule: the target body
  * needs data the browser does not have — the OTHER provider's connection.
  */
-const WORKSPACE_HREFS: Record<Provider, string> = {
-  github: '/settings/workspace/github',
-  gitlab: '/settings/workspace/gitlab',
+/**
+ * The fallback destinations, for a caller that passes none.
+ *
+ * ⚠️ THEY MOVED WITH THE SURFACE (Story MOTIR-4669 · MOTIR-4680). These named
+ * `/settings/workspace/{github,gitlab}`, two routes that are now DELETED and
+ * permanently redirected here — a default pointing at a route the app no longer
+ * serves is indistinguishable from an oversight, and every switch would have
+ * paid a redirect hop. The one shipped caller passes `hrefs` explicitly (the org
+ * page keeps the provider in a search param), so this is the shape a future
+ * caller inherits rather than a live path.
+ */
+const DEFAULT_HREFS: Record<Provider, string> = {
+  github: '/settings/organization/git',
+  gitlab: '/settings/organization/git?provider=gitlab',
 };
 
 export function ProviderSwitch({
   active,
-  hrefs = WORKSPACE_HREFS,
+  hrefs = DEFAULT_HREFS,
 }: {
   active: Provider;
   hrefs?: Record<Provider, string>;

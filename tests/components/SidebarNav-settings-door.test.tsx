@@ -199,11 +199,17 @@ describe('the settings door yields to a more specific workspace sub-route', () =
     expect(settingsRow()).toBeNull();
   });
 
+  // ⚠️ THE GIT ROUTE MOVED A TIER (Story MOTIR-4669 · MOTIR-4680). It was
+  // `/settings/workspace/{github,gitlab}`; both are deleted and permanently
+  // redirect to `/settings/organization/git`, and the RAIL ROW follows the
+  // surface rather than riding the redirect. The pair of workspace rows is
+  // REPLACED by the org one rather than kept alongside it: a clause that yields
+  // at a path nothing can navigate to is not a passing test, it is an untested
+  // clause that still looks covered.
   it.each([
     ['/settings/workspace/security', 'Security'],
     ['/settings/workspace/jobs', 'Job runs'],
-    ['/settings/workspace/github', 'Git'],
-    ['/settings/workspace/gitlab', 'Git'],
+    ['/settings/organization/git', 'Git'],
   ])('yields at %s, and the %s row takes the highlight instead', (path, owner) => {
     pathname = path;
     renderRail(ADMIN, PROJECT, true);
