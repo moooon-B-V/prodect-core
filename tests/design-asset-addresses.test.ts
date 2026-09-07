@@ -236,6 +236,23 @@ function sweep(): Finding[] {
 // it finds is its own card), and MOTIR-2340 then corrected the assets and
 // deleted the rows. A stale address belongs in a fix, never in this table.
 const KNOWN: { file: string; address: string; why: string }[] = [
+  // ── A route a design asset SPECIFIES, before the card it gates builds it ──
+  //  The ordinary direction for a design: the asset is the layout source of
+  //  truth for a `code` card that is `blocked_by` it, and it has to be able to
+  //  say where the surface lives. `/workbench` resolves the moment MOTIR-4782
+  //  merges, and `carries no KNOWN entry that has stopped applying` is what
+  //  makes these rows delete themselves then rather than sit here claiming
+  //  something untrue.
+  {
+    file: 'design/workbench/design-notes.md',
+    address: '/workbench',
+    why: 'The address the surface moves to. MOTIR-4782 creates the route and its 308 from /home; this asset is its spec. DELETE THIS ROW when that card merges.',
+  },
+  {
+    file: 'design/workbench/workbench.mock.html',
+    address: '/workbench',
+    why: 'Every panel s frame bar and every tab href name the address the page will answer on. Same card, same removal. DELETE THIS ROW when MOTIR-4782 merges.',
+  },
   // ── A route on a DIFFERENT host, kept in the unified chrome's nav ─────────
   // `design/public-site/` (MOTIR-3880) draws the ONE chrome every motir.co
   // surface wears, and the shipped `Design` showcase nav item resolves on
@@ -716,7 +733,7 @@ const KNOWN: { file: string; address: string; why: string }[] = [
     why: 'The public reading surface moved to motir-marketing (MOTIR-3932); this asset is a point-in-time record of the route as it was on app.motir.co.',
   },
   {
-    file: 'design/home/home.mock.html',
+    file: 'design/workbench/workbench.mock.html',
     address: '/docs',
     why: 'The public reading surface moved to motir-marketing (MOTIR-3932); this asset is a point-in-time record of the route as it was on app.motir.co.',
   },
@@ -1392,6 +1409,39 @@ const KNOWN_PATHS: { file: string; path: string; why: string }[] = [
   //  from `main`, which is why they do not resolve here. Each row DELETES
   //  ITSELF when the parent lands; `carries no KNOWN_PATHS entry that has
   //  stopped applying` is what turns a stale one red rather than quiet.
+  // ── An area a design asset RECORDS ITSELF as having been RENAMED FROM ─────
+  //  MOTIR-4779 renamed `design/home/` to `design/workbench/` with the surface
+  //  it draws, and both files say so on purpose: a reader who arrives from an
+  //  old citation has to be able to tell "this was moved" from "this is gone".
+  //  The old path is therefore written deliberately, and these rows are
+  //  permanent — unlike the point-in-time rows below, the asset is not history,
+  //  it is the CURRENT asset naming where it used to live.
+  {
+    file: 'design/workbench/design-notes.md',
+    path: 'design/home',
+    why: 'The rename record — `design/home/` no longer exists BY THIS CARD, and the section that says so has to name it.',
+  },
+  {
+    file: 'design/workbench/design-notes.md',
+    path: 'design/home/home.mock.html',
+    why: 'Same enumeration — the old mock path, named so the re-key is checkable.',
+  },
+  {
+    file: 'design/workbench/workbench.mock.html',
+    path: 'design/home',
+    why: "The mock's own header comment carries the same rename record as the notes, for a reader who opens the asset rather than the spec.",
+  },
+  // ── A route a design asset SPECIFIES, which the card it gates has not built ─
+  //  The ordinary direction for a design: the asset is the spec, and the page
+  //  it names is built by the `code` card that is `blocked_by` it. It resolves
+  //  the moment that card merges, and `carries no KNOWN_PATHS entry that has
+  //  stopped applying` is what makes this row delete itself then rather than
+  //  sit here claiming something untrue.
+  {
+    file: 'design/workbench/design-notes.md',
+    path: 'app/(authed)/workbench/page.tsx',
+    why: 'MOTIR-4782 creates it; this asset is its layout source of truth. DELETE THIS ROW when that card merges.',
+  },
   // ── A source path a design asset RECORDED, which the app has since moved ──
   // The `KNOWN` table's point-in-time rows, one axis over: the same MOTIR-2534
   // route move renamed the DIRECTORY, so an asset citing the pane's `page.tsx`
@@ -1767,7 +1817,11 @@ const KNOWN_PATHS: { file: string; path: string; why: string }[] = [
     why: 'The public rendering surface moved to motir-marketing (MOTIR-3951); this asset is a point-in-time record of the file before it was deleted.',
   },
   {
-    file: 'design/home/design-notes.md',
+    // ⚠️ RE-KEYED, not added (MOTIR-4779): `design/home/` was renamed to
+    // `design/workbench/` with the surface. An exemption left on the old path
+    // is a stale claim about a file that does not exist, and the asset it
+    // covers loses its exemption in the same commit.
+    file: 'design/workbench/design-notes.md',
     path: 'app/(public)/_components/PublicTabNav.tsx',
     why: 'The public rendering surface moved to motir-marketing (MOTIR-3951); this asset is a point-in-time record of the file before it was deleted.',
   },
